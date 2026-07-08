@@ -49,26 +49,27 @@ defmodule Logistiki.VirtualAccounts.VirtualAccount do
 
   schema "virtual_accounts" do
     # Unique, stable, human-readable account code (colon-separated). Example: `\"ASSETS:CASH:USD:NOSTRO\"`
-    field :code, :string
+    field(:code, :string)
     # Display name of the account. Example: `\"Nostro USD\"`
-    field :name, :string
+    field(:name, :string)
     # Account type, one of `account_types/0`. Example: `\"asset\"`, `\"liability\"`, `\"client\"`
-    field :account_type, :string
-    # Currency code; required for posting accounts, nil for aggregation accounts. Example: `\"USD\"` or `nil`
-    field :currency, :string
-    # Account status, one of `statuses/0`. Default: `\"active\"`. Example: `\"frozen\"`
-    field :status, :string, default: "active"
-    # Whether postings may target this account (only leaf accounts). Default: `false`.
-    field :posting_allowed, :boolean, default: false
-    # Normal balance direction: `\"debit\"` or `\"credit\"`. Example: `\"debit\"`
-    field :normal_balance, :string
-    # Unique external reference. Example: `\"core_001\"`
-    field :external_id, :string
-    # Extensible key/value metadata. Default: `%{}`. Example: `%{\"iban\" => \"GB29...\"}`
-    field :metadata, :map, default: %{}
+    field(:account_type, :string)
 
-    belongs_to :parent, __MODULE__, foreign_key: :parent_id
-    has_many :children, __MODULE__, foreign_key: :parent_id
+    # Currency code; required for posting accounts, nil for aggregation accounts. Example: `\"USD\"` or `nil`
+    field(:currency, :string)
+    # Account status, one of `statuses/0`. Default: `\"active\"`. Example: `\"frozen\"`
+    field(:status, :string, default: "active")
+    # Whether postings may target this account (only leaf accounts). Default: `false`.
+    field(:posting_allowed, :boolean, default: false)
+    # Normal balance direction: `\"debit\"` or `\"credit\"`. Example: `\"debit\"`
+    field(:normal_balance, :string)
+    # Unique external reference. Example: `\"core_001\"`
+    field(:external_id, :string)
+    # Extensible key/value metadata. Default: `%{}`. Example: `%{\"iban\" => \"GB29...\"}`
+    field(:metadata, :map, default: %{})
+
+    belongs_to(:parent, __MODULE__, foreign_key: :parent_id)
+    has_many(:children, __MODULE__, foreign_key: :parent_id)
 
     timestamps(type: :utc_datetime)
   end
@@ -198,7 +199,9 @@ defmodule Logistiki.VirtualAccounts.VirtualAccount do
     values = Enum.map(@normal_balances, &Atom.to_string/1)
 
     case get_field(changeset, :normal_balance) do
-      nil -> changeset
+      nil ->
+        changeset
+
       value ->
         if Enum.member?(values, value) do
           changeset

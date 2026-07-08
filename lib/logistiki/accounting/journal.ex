@@ -60,38 +60,39 @@ defmodule Logistiki.Accounting.Journal do
 
   schema "journals" do
     # Originating business event id. Example: `\"evt_001\"`
-    field :event_id, :string
+    field(:event_id, :string)
     # External reference id. Example: `\"ext_123\"`
-    field :external_id, :string
+    field(:external_id, :string)
     # Source system that produced the event. Example: `\"bank_core\"`
-    field :source_system, :string
+    field(:source_system, :string)
     # Source event type. Example: `\"deposit_received\"`
-    field :source_type, :string
+    field(:source_type, :string)
     # Source-system event id. Example: `\"wire_123\"`
-    field :source_id, :string
+    field(:source_id, :string)
     # Selected accounting policy (for replay/audit). Example: `\"cash_deposit\"`
-    field :selected_policy, :string
+    field(:selected_policy, :string)
     # Selected posting template (for replay/audit). Example: `\"cash_deposit\"`
-    field :selected_template, :string
+    field(:selected_template, :string)
     # Human-readable description. Example: `\"deposit_received via cash_deposit\"`
-    field :description, :string
+    field(:description, :string)
     # Journal status, one of `statuses/0`. Default: `\"draft\"`. Example: `\"posted\"`
-    field :status, :string, default: "draft"
+    field(:status, :string, default: "draft")
     # Accounting effective date. Example: `~D[2026-07-07]`
-    field :effective_date, :date
+    field(:effective_date, :date)
     # When the journal was posted. Example: `~U[2026-07-07 12:00:00Z]`
-    field :posted_at, :utc_datetime
+    field(:posted_at, :utc_datetime)
     # When the journal was reversed. Example: `~U[2026-07-07 14:00:00Z]`
-    field :reversed_at, :utc_datetime
-    # Unique idempotency key preventing duplicate posting. Example: `\"evt:evt_001:policy:cash_deposit\"`
-    field :idempotency_key, :string
-    # Full pipeline explanation map. Example: `%{policy: :cash_deposit, account_roles: %{...}}`
-    field :explanation, :map
-    # Extensible metadata. Default: `%{}`. Example: `%{\"actor_id\" => \"user_1\"}`
-    field :metadata, :map, default: %{}
+    field(:reversed_at, :utc_datetime)
 
-    has_many :postings, Logistiki.Accounting.Posting, on_replace: :delete
-    belongs_to :reversal_of, __MODULE__, foreign_key: :reversal_of_id
+    # Unique idempotency key preventing duplicate posting. Example: `\"evt:evt_001:policy:cash_deposit\"`
+    field(:idempotency_key, :string)
+    # Full pipeline explanation map. Example: `%{policy: :cash_deposit, account_roles: %{...}}`
+    field(:explanation, :map)
+    # Extensible metadata. Default: `%{}`. Example: `%{\"actor_id\" => \"user_1\"}`
+    field(:metadata, :map, default: %{})
+
+    has_many(:postings, Logistiki.Accounting.Posting, on_replace: :delete)
+    belongs_to(:reversal_of, __MODULE__, foreign_key: :reversal_of_id)
 
     timestamps(type: :utc_datetime)
   end

@@ -49,27 +49,27 @@ defmodule Logistiki.Events.BusinessEvent do
 
   schema "business_events" do
     # Event type string. Example: `\"deposit_received\"`, `\"fee_assessed\"`
-    field :event_type, :string
+    field(:event_type, :string)
     # Source system that published the event. Example: `\"bank_core\"`, `\"onboarding\"`
-    field :source_system, :string
+    field(:source_system, :string)
     # Source-system event id. Example: `\"wire_123\"`, `\"crm_456\"`
-    field :source_id, :string
+    field(:source_id, :string)
     # Actor who initiated the event. Example: `\"user_789\"`
-    field :actor_id, :string
+    field(:actor_id, :string)
     # When the event occurred. Example: `~U[2026-07-07 12:00:00Z]`
-    field :occurred_at, :utc_datetime
+    field(:occurred_at, :utc_datetime)
     # Accounting effective date. Example: `~D[2026-07-07]`
-    field :effective_date, :date
+    field(:effective_date, :date)
     # Original event as a string-keyed map. Default: `%{}`.
-    field :payload, :map, default: %{}
+    field(:payload, :map, default: %{})
     # Normalized event representation (`Normalized.to_map/1`).
-    field :normalized_payload, :map
+    field(:normalized_payload, :map)
     # Event status, one of `statuses/0`. Default: `\"received\"`. Example: `\"processed\"`
-    field :status, :string, default: "received"
+    field(:status, :string, default: "received")
     # Pipeline explanation map (set on completion). Example: `%{policy: :cash_deposit}`
-    field :explanation, :map
+    field(:explanation, :map)
     # Extensible metadata. Default: `%{}`.
-    field :metadata, :map, default: %{}
+    field(:metadata, :map, default: %{})
 
     timestamps(type: :utc_datetime)
   end

@@ -57,11 +57,21 @@ defmodule Logistiki.Relationships do
       ["is invalid"]
   """
   @doc since: "0.1.0"
-  @spec link_entity_account(BusinessEntity.t() | integer(), VirtualAccount.t() | integer(), atom(), map()) ::
+  @spec link_entity_account(
+          BusinessEntity.t() | integer(),
+          VirtualAccount.t() | integer(),
+          atom(),
+          map()
+        ) ::
           {:ok, EntityAccount.t()} | {:error, Ecto.Changeset.t()}
   def link_entity_account(entity, account, relationship_type, attrs \\ %{})
 
-  def link_entity_account(%BusinessEntity{id: entity_id}, %VirtualAccount{id: account_id}, type, attrs) do
+  def link_entity_account(
+        %BusinessEntity{id: entity_id},
+        %VirtualAccount{id: account_id},
+        type,
+        attrs
+      ) do
     link_entity_account(entity_id, account_id, type, attrs)
   end
 
@@ -108,9 +118,17 @@ defmodule Logistiki.Relationships do
       {0, nil}
   """
   @doc since: "0.1.0"
-  @spec unlink_entity_account(BusinessEntity.t() | integer(), VirtualAccount.t() | integer(), atom()) ::
+  @spec unlink_entity_account(
+          BusinessEntity.t() | integer(),
+          VirtualAccount.t() | integer(),
+          atom()
+        ) ::
           {integer(), nil}
-  def unlink_entity_account(%BusinessEntity{id: entity_id}, %VirtualAccount{id: account_id}, relationship_type) do
+  def unlink_entity_account(
+        %BusinessEntity{id: entity_id},
+        %VirtualAccount{id: account_id},
+        relationship_type
+      ) do
     unlink_entity_account(entity_id, account_id, relationship_type)
   end
 
@@ -159,9 +177,11 @@ defmodule Logistiki.Relationships do
   @spec list_accounts_for_entity(BusinessEntity.t() | integer(), keyword()) :: [VirtualAccount.t()]
   def list_accounts_for_entity(entity_or_id, opts \\ [])
 
-  def list_accounts_for_entity(%BusinessEntity{id: id}, opts), do: list_accounts_for_entity(id, opts)
+  def list_accounts_for_entity(%BusinessEntity{id: id}, opts),
+    do: list_accounts_for_entity(id, opts)
 
-  def list_accounts_for_entity(entity_id, opts) when is_integer(entity_id) or is_binary(entity_id) do
+  def list_accounts_for_entity(entity_id, opts)
+      when is_integer(entity_id) or is_binary(entity_id) do
     direct_accounts_query(entity_id, opts)
     |> order_by([a], asc: a.code)
     |> Repo.all()
@@ -224,9 +244,11 @@ defmodule Logistiki.Relationships do
   @spec list_entities_for_account(VirtualAccount.t() | integer(), keyword()) :: [BusinessEntity.t()]
   def list_entities_for_account(account_or_id, opts \\ [])
 
-  def list_entities_for_account(%VirtualAccount{id: id}, opts), do: list_entities_for_account(id, opts)
+  def list_entities_for_account(%VirtualAccount{id: id}, opts),
+    do: list_entities_for_account(id, opts)
 
-  def list_entities_for_account(account_id, opts) when is_integer(account_id) or is_binary(account_id) do
+  def list_entities_for_account(account_id, opts)
+      when is_integer(account_id) or is_binary(account_id) do
     direct_entities_query(account_id, opts)
     |> order_by([e], asc: e.name)
     |> Repo.all()
@@ -235,31 +257,37 @@ defmodule Logistiki.Relationships do
   # Query: accounts linked directly to `entity_id`, filtered by effective date
   # and relationship type.
   defp direct_accounts_query(entity_id, opts) do
-    from a in VirtualAccount,
-      join: r in EntityAccount, on: r.virtual_account_id == a.id,
+    from(a in VirtualAccount,
+      join: r in EntityAccount,
+      on: r.virtual_account_id == a.id,
       where: r.business_entity_id == ^entity_id,
       where: ^effective_filter(opts),
       where: ^type_filter(opts)
+    )
   end
 
   # Query: accounts linked to any entity in `entity_ids` (used for entity-tree
   # queries).
   defp tree_accounts_query(entity_ids, opts) do
-    from a in VirtualAccount,
-      join: r in EntityAccount, on: r.virtual_account_id == a.id,
+    from(a in VirtualAccount,
+      join: r in EntityAccount,
+      on: r.virtual_account_id == a.id,
       where: r.business_entity_id in ^entity_ids,
       where: ^effective_filter(opts),
       where: ^type_filter(opts)
+    )
   end
 
   # Query: entities linked directly to `account_id`, filtered by effective date
   # and relationship type.
   defp direct_entities_query(account_id, opts) do
-    from e in BusinessEntity,
-      join: r in EntityAccount, on: r.business_entity_id == e.id,
+    from(e in BusinessEntity,
+      join: r in EntityAccount,
+      on: r.business_entity_id == e.id,
       where: r.virtual_account_id == ^account_id,
       where: ^effective_filter(opts),
       where: ^type_filter(opts)
+    )
   end
 
   # Builds a dynamic filter for effective dating. When `:at` is given, returns

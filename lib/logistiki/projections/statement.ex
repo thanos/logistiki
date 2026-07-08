@@ -27,7 +27,22 @@ defmodule Logistiki.Projections.StatementLine do
           metadata: map()
         }
 
-  defstruct [:journal_id, :posting_id, :event_id, :date, :description, :account_code,
-    :debit, :credit, :amount, :currency, :running_balance, :source_system, :source_id,
-    :selected_policy, :selected_template, metadata: %{}]
+  defstruct [
+    :journal_id,
+    :posting_id,
+    :event_id,
+    :date,
+    :description,
+    :account_code,
+    :debit,
+    :credit,
+    :amount,
+    :currency,
+    :running_balance,
+    :source_system,
+    :source_id,
+    :selected_policy,
+    :selected_template,
+    metadata: %{}
+  ]
 end

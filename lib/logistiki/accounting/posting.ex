@@ -55,22 +55,23 @@ defmodule Logistiki.Accounting.Posting do
 
   schema "postings" do
     # Account code (denormalized for audit readability). Example: `\"ASSETS:CASH:USD:NOSTRO\"`
-    field :account_code, :string
+    field(:account_code, :string)
     # Direction: `\"debit\"` or `\"credit\"`. Example: `\"debit\"`
-    field :debit_credit, :string
+    field(:debit_credit, :string)
     # Amount (always positive). Example: `Decimal.new(\"1000.00\")`
-    field :amount, :decimal
+    field(:amount, :decimal)
     # Currency code. Example: `\"USD\"`
-    field :currency, :string
+    field(:currency, :string)
     # Optional memo/note. Example: `\"wire deposit\"`
-    field :memo, :string
+    field(:memo, :string)
     # Sequence within the journal (1-based). Example: `1`
-    field :sequence, :integer
-    # Metadata including the symbolic role. Default: `%{}`. Example: `%{\"role\" => \"cash_account\"}`
-    field :metadata, :map, default: %{}
+    field(:sequence, :integer)
 
-    belongs_to :journal, Logistiki.Accounting.Journal
-    belongs_to :virtual_account, Logistiki.VirtualAccounts.VirtualAccount
+    # Metadata including the symbolic role. Default: `%{}`. Example: `%{\"role\" => \"cash_account\"}`
+    field(:metadata, :map, default: %{})
+
+    belongs_to(:journal, Logistiki.Accounting.Journal)
+    belongs_to(:virtual_account, Logistiki.VirtualAccounts.VirtualAccount)
 
     timestamps(type: :utc_datetime)
   end

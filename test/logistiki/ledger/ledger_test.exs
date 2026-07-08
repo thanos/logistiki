@@ -43,7 +43,11 @@ defmodule Logistiki.LedgerTest do
     end
 
     test "maps deterministic, valid beancount account names" do
-      {:ok, account} = Logistiki.VirtualAccounts.get_account_by_code("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+      {:ok, account} =
+        Logistiki.VirtualAccounts.get_account_by_code(
+          "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING"
+        )
+
       name = BeancountMapper.to_beancount_account(account)
       assert String.starts_with?(name, "Liabilities:")
       # Each segment must start with an uppercase letter (beancount rule).
@@ -77,14 +81,20 @@ defmodule Logistiki.LedgerTest do
       assert {:ok, _} = Logistiki.process(event)
 
       assert {:ok, [sim_cash]} = Logistiki.balance("ASSETS:CASH:USD:NOSTRO")
-      assert {:ok, [sim_client]} = Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+
+      assert {:ok, [sim_client]} =
+               Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
 
       # The beancount oracle, rendering all posted journals, should report the
       # same positions (sign-encoded).
       assert {:ok, oracle} = LedgerBeancount.oracle_balances()
 
       {:ok, cash_account} = Logistiki.VirtualAccounts.get_account_by_code("ASSETS:CASH:USD:NOSTRO")
-      {:ok, client_account} = Logistiki.VirtualAccounts.get_account_by_code("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+
+      {:ok, client_account} =
+        Logistiki.VirtualAccounts.get_account_by_code(
+          "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING"
+        )
 
       assert Map.has_key?(oracle, BeancountMapper.to_beancount_account(cash_account))
       assert Map.has_key?(oracle, BeancountMapper.to_beancount_account(client_account))

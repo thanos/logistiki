@@ -51,25 +51,25 @@ defmodule Logistiki.Audit.AuditEvent do
 
   schema "audit_events" do
     # Actor who initiated the action. Example: `\"user_789\"`
-    field :actor_id, :string
+    field(:actor_id, :string)
     # Originating business event id. Example: `\"evt_001\"`
-    field :event_id, :string
+    field(:event_id, :string)
     # Related journal id. Example: `5`
-    field :journal_id, :id
+    field(:journal_id, :id)
     # Pipeline stage action (required). Example: `\"journal_posted\"`, `\"business_event_received\"`
-    field :action, :string
+    field(:action, :string)
     # Type of resource acted upon. Example: `\"journal\"`, `\"event\"`
-    field :resource_type, :string
+    field(:resource_type, :string)
     # Resource id. Example: `\"5\"`
-    field :resource_id, :string
+    field(:resource_id, :string)
     # State before the action (for updates). Example: `%{status: \"draft\"}`
-    field :before, :map
+    field(:before, :map)
     # State after the action (for updates). Example: `%{status: \"posted\"}`
-    field :after, :map
+    field(:after, :map)
     # Structured explanation. Example: `%{policy: :cash_deposit}`
-    field :explanation, :map
+    field(:explanation, :map)
     # Extensible metadata. Default: `%{}`.
-    field :metadata, :map, default: %{}
+    field(:metadata, :map, default: %{})
 
     timestamps(type: :utc_datetime, updated_at: false)
   end

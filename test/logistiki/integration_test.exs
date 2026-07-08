@@ -28,7 +28,9 @@ defmodule Logistiki.IntegrationTest do
       assert {:ok, [cash_balance]} = Logistiki.balance("ASSETS:CASH:USD:NOSTRO")
       assert Decimal.equal?(cash_balance.net, Decimal.new("1000.00"))
 
-      assert {:ok, [client_balance]} = Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+      assert {:ok, [client_balance]} =
+               Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+
       assert Decimal.equal?(client_balance.net, Decimal.new("-1000.00"))
     end
 
@@ -51,7 +53,9 @@ defmodule Logistiki.IntegrationTest do
       assert fee_result.policy == :corporate_wire_fee
 
       # Client liability debited by 25 (reduces credit balance), fee income credited.
-      assert {:ok, [client_before]} = Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+      assert {:ok, [client_before]} =
+               Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+
       # 1000 deposit - 25 fee debit = 975 credit => net -975
       assert Decimal.equal?(client_before.net, Decimal.new("-975.00"))
 
@@ -62,7 +66,9 @@ defmodule Logistiki.IntegrationTest do
       assert reversal_result.status == :ok
       assert reversal_result.details[:reversal].status == "posted"
 
-      assert {:ok, [client_after]} = Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+      assert {:ok, [client_after]} =
+               Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+
       assert Decimal.equal?(client_after.net, Decimal.new("-1000.00"))
 
       assert {:ok, [fee_balance]} = Logistiki.balance("INCOME:FEES:WIRE")
@@ -79,15 +85,25 @@ defmodule Logistiki.IntegrationTest do
     end
 
     test "produces a balanced trial balance", %{accounts: accounts} do
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "1000.00"))
-      assert {:ok, _} = Logistiki.process(Seeds.fee_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "25.00"))
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "1000.00")
+               )
+
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.fee_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "25.00")
+               )
 
       assert {:ok, tb} = Logistiki.trial_balance()
       assert tb.balanced
     end
 
     test "statement includes a running balance", %{accounts: accounts} do
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "1000.00"))
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "1000.00")
+               )
 
       assert {:ok, lines} = Logistiki.statement("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
       assert length(lines) == 1
@@ -130,7 +146,11 @@ defmodule Logistiki.IntegrationTest do
     end
 
     test "the full ledger verifies with beancount check", %{accounts: accounts} do
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "1000.00"))
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "1000.00")
+               )
+
       assert {:ok, _} = Logistiki.Ledger.Beancount.verify_ledger()
     end
   end
@@ -140,10 +160,14 @@ defmodule Logistiki.IntegrationTest do
       Logistiki.put_ledger_backend(Logistiki.Ledger.Simulation)
 
       assert {:ok, _} =
-               Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "1000.00"))
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "1000.00")
+               )
 
       assert {:ok, _} =
-               Logistiki.process(Seeds.fee_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "25.00"))
+               Logistiki.process(
+                 Seeds.fee_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "25.00")
+               )
 
       sim_balances = balance_map("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
 
@@ -151,7 +175,9 @@ defmodule Logistiki.IntegrationTest do
       assert {:ok, oracle} = Logistiki.Ledger.Beancount.oracle_balances()
 
       {:ok, client_account} =
-        Logistiki.VirtualAccounts.get_account_by_code("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+        Logistiki.VirtualAccounts.get_account_by_code(
+          "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING"
+        )
 
       client_beancount = Logistiki.Ledger.BeancountMapper.to_beancount_account(client_account)
       assert Map.has_key?(oracle, client_beancount)

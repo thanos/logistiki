@@ -98,7 +98,8 @@ defmodule Logistiki.BusinessEntities do
       "active"
   """
   @doc since: "0.1.0"
-  @spec update_entity(BusinessEntity.t(), map()) :: {:ok, BusinessEntity.t()} | {:error, Ecto.Changeset.t()}
+  @spec update_entity(BusinessEntity.t(), map()) ::
+          {:ok, BusinessEntity.t()} | {:error, Ecto.Changeset.t()}
   def update_entity(%BusinessEntity{} = entity, attrs) do
     entity
     |> BusinessEntity.changeset(attrs)
@@ -216,7 +217,7 @@ defmodule Logistiki.BusinessEntities do
   @doc since: "0.1.0"
   @spec list_children(BusinessEntity.t()) :: [BusinessEntity.t()]
   def list_children(%BusinessEntity{id: id}) do
-    Repo.all(from e in BusinessEntity, where: e.parent_id == ^id, order_by: [asc: e.name])
+    Repo.all(from(e in BusinessEntity, where: e.parent_id == ^id, order_by: [asc: e.name]))
   end
 
   @doc """
@@ -326,7 +327,8 @@ defmodule Logistiki.BusinessEntities do
   defp parent_id_from(id) when is_binary(id), do: id
 
   @doc false
-  @spec insert_closure_for(BusinessEntity.t()) :: {:ok, :root | :child} | {:error, :parent_closure_missing}
+  @spec insert_closure_for(BusinessEntity.t()) ::
+          {:ok, :root | :child} | {:error, :parent_closure_missing}
   def insert_closure_for(%BusinessEntity{id: id, parent_id: nil}) do
     insert_self_closure(id)
     {:ok, :root}
@@ -393,8 +395,9 @@ defmodule Logistiki.BusinessEntities do
   # Rewrites the closure for a subtree moved under a new parent. For every
   # descendant d of id (including id) and every ancestor a of the new parent,
   # adds closure(a, d, depth(a, parent) + depth(id, d) + 1).
-  defp link_subtree_under_new_parent(%BusinessEntity{id: id, parent_id: nil}) do
-    insert_self_closure(id)
+  defp link_subtree_under_new_parent(%BusinessEntity{id: _id, parent_id: nil}) do
+    # When moving to root, the self-closure row already exists. The
+    # delete_old_closure_on_move already removed the inherited rows.
     {:ok, :root}
   end
 
@@ -430,16 +433,20 @@ defmodule Logistiki.BusinessEntities do
 
   # Base query for descendants (depth > 0) of `id` via the closure table.
   defp descendants_query(id) do
-    from e in BusinessEntity,
-      join: c in BusinessEntityClosure, on: c.descendant_id == e.id,
+    from(e in BusinessEntity,
+      join: c in BusinessEntityClosure,
+      on: c.descendant_id == e.id,
       where: c.ancestor_id == ^id and c.depth > 0
+    )
   end
 
   # Base query for ancestors (depth > 0) of `id` via the closure table.
   defp ancestors_query(id) do
-    from e in BusinessEntity,
-      join: c in BusinessEntityClosure, on: c.ancestor_id == e.id,
+    from(e in BusinessEntity,
+      join: c in BusinessEntityClosure,
+      on: c.ancestor_id == e.id,
       where: c.descendant_id == ^id and c.depth > 0
+    )
   end
 
   @doc """
@@ -464,7 +471,7 @@ defmodule Logistiki.BusinessEntities do
   @doc since: "0.1.0"
   @spec descendant_ids(BusinessEntity.t()) :: [integer()]
   def descendant_ids(%BusinessEntity{id: id}) do
-    Repo.all(from c in BusinessEntityClosure, where: c.ancestor_id == ^id, select: c.descendant_id)
+    Repo.all(from(c in BusinessEntityClosure, where: c.ancestor_id == ^id, select: c.descendant_id))
   end
 
   @doc """
@@ -486,6 +493,6 @@ defmodule Logistiki.BusinessEntities do
   @doc since: "0.1.0"
   @spec ancestor_ids(BusinessEntity.t()) :: [integer()]
   def ancestor_ids(%BusinessEntity{id: id}) do
-    Repo.all(from c in BusinessEntityClosure, where: c.descendant_id == ^id, select: c.ancestor_id)
+    Repo.all(from(c in BusinessEntityClosure, where: c.descendant_id == ^id, select: c.ancestor_id))
   end
 end

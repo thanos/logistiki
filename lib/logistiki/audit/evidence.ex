@@ -22,6 +22,11 @@ defmodule Logistiki.Audit.Evidence do
   @doc "Builds an evidence record from a pipeline trace."
   @doc since: "0.1.0"
   def build(event_id, journal_id, stages, explanation) do
-    %__MODULE__{event_id: event_id, journal_id: journal_id, stages: stages, explanation: explanation}
+    %__MODULE__{
+      event_id: event_id,
+      journal_id: journal_id,
+      stages: stages,
+      explanation: explanation
+    }
   end
 end

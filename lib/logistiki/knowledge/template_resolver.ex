@@ -65,7 +65,8 @@ defmodule Logistiki.Knowledge.TemplateResolver do
       iex> {:error, {:missing_account_role, :unknown_role}} = Logistiki.Knowledge.TemplateResolver.resolve_account_role(%{}, :unknown_role)
   """
   @doc since: "0.1.0"
-  @spec resolve_account_role(map(), atom()) :: {:ok, String.t()} | {:error, {:missing_account_role, atom()}}
+  @spec resolve_account_role(map(), atom()) ::
+          {:ok, String.t()} | {:error, {:missing_account_role, atom()}}
   def resolve_account_role(account_roles, role) when is_map(account_roles) do
     case Map.fetch(account_roles, role) do
       {:ok, code} -> {:ok, code}

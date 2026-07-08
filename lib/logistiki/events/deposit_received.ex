@@ -30,6 +30,6 @@ defmodule Logistiki.Event.DepositReceived do
   use Logistiki.Event, type: "deposit_received"
 
   defevent do
-    field :cash_account_code, :string
+    field(:cash_account_code, :string)
   end
 end

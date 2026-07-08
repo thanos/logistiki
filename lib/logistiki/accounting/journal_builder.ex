@@ -56,7 +56,12 @@ defmodule Logistiki.Accounting.JournalBuilder do
   end
 
   def build(%KnowledgeResult{} = result, %Normalized{} = event) do
-    %KnowledgeResult{policy: policy, template: template, template_postings: postings, account_roles: roles} =
+    %KnowledgeResult{
+      policy: policy,
+      template: template,
+      template_postings: postings,
+      account_roles: roles
+    } =
       result
 
     idempotency_key = idempotency_key(event, policy)
@@ -147,7 +152,9 @@ defmodule Logistiki.Accounting.JournalBuilder do
 
   # Generates an idempotency key from the event id and policy. When the event
   # has no id, a random suffix is used.
-  defp idempotency_key(%Normalized{id: nil}, policy), do: "policy:#{policy}:#{:rand.uniform(1_000_000_000)}"
+  defp idempotency_key(%Normalized{id: nil}, policy),
+    do: "policy:#{policy}:#{:rand.uniform(1_000_000_000)}"
+
   defp idempotency_key(%Normalized{id: event_id}, policy), do: "evt:#{event_id}:policy:#{policy}"
 
   # Builds a human-readable description from the event type and policy.

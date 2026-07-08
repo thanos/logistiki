@@ -1,6 +1,10 @@
 # Used by "mix format"
 [
-  inputs: ["{mix,.formatter}.exs", "{config,lib,test,docs,examples}/**/*.{ex,exs}", "docs/livebooks/*.livemd"],
+  inputs: [
+    "{mix,.formatter}.exs",
+    "{config,lib,test,docs,examples}/**/*.{ex,exs}",
+    "docs/livebooks/*.livemd"
+  ],
   line_length: 100,
   import_deps: [:ecto_sql]
 ]

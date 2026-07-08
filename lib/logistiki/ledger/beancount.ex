@@ -186,7 +186,10 @@ defmodule Logistiki.Ledger.Beancount do
   # verify_reversal_with_oracle — private helper.
   defp verify_reversal_with_oracle(journal, attrs) do
     postings = Accounting.list_postings(journal)
-    {:ok, reversal, reversal_postings} = Logistiki.Accounting.JournalBuilder.build_reversal(journal, postings, attrs)
+
+    {:ok, reversal, reversal_postings} =
+      Logistiki.Accounting.JournalBuilder.build_reversal(journal, postings, attrs)
+
     verify_with_oracle(reversal, reversal_postings)
   end
 
@@ -213,7 +216,7 @@ defmodule Logistiki.Ledger.Beancount do
 
   # accounts_by_code — private helper.
   defp accounts_by_code(codes) do
-    Repo.all(from a in VirtualAccount, where: a.code in ^codes)
+    Repo.all(from(a in VirtualAccount, where: a.code in ^codes))
     |> Enum.into(%{}, fn a -> {a.code, a} end)
   end
 

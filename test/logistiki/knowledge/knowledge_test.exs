@@ -85,14 +85,15 @@ defmodule Logistiki.KnowledgeTest do
     end
 
     test "static account-role fallback resolves interest_expense_account" do
-      event = Normalized.new(%{
-        id: "evt_3",
-        type: "interest_accrued",
-        amount: Decimal.new("5.00"),
-        currency: "USD",
-        account_code: "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING",
-        entity_type: "corporate"
-      })
+      event =
+        Normalized.new(%{
+          id: "evt_3",
+          type: "interest_accrued",
+          amount: Decimal.new("5.00"),
+          currency: "USD",
+          account_code: "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING",
+          entity_type: "corporate"
+        })
 
       assert {:ok, result} = Knowledge.evaluate(event)
       assert result.policy == :interest_accrual

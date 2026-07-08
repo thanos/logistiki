@@ -32,6 +32,6 @@ defmodule Logistiki.Event.AccountOpened do
   use Logistiki.Event, type: "account_opened"
 
   defevent do
-    field :has_accounting_impact, :boolean, default: false
+    field(:has_accounting_impact, :boolean, default: false)
   end
 end

@@ -28,6 +28,6 @@ defmodule Logistiki.Event.InterestAccrued do
   use Logistiki.Event, type: "interest_accrued"
 
   defevent do
-    field :interest_expense_account_code, :string
+    field(:interest_expense_account_code, :string)
   end
 end

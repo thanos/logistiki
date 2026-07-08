@@ -11,6 +11,7 @@ defmodule Logistiki.Demo.Seeds do
   """
 
   alias Logistiki.BusinessEntities
+
   alias Logistiki.Event.{
     AccountOpened,
     DepositReceived,
@@ -25,7 +26,11 @@ defmodule Logistiki.Demo.Seeds do
   @doc since: "0.1.0"
   def seed_entities do
     {:ok, acme_holdings} =
-      BusinessEntities.create_entity(%{name: "Acme Holdings", entity_type: "company", status: "active"})
+      BusinessEntities.create_entity(%{
+        name: "Acme Holdings",
+        entity_type: "company",
+        status: "active"
+      })
 
     {:ok, acme_trading} =
       BusinessEntities.create_entity(%{
@@ -44,7 +49,11 @@ defmodule Logistiki.Demo.Seeds do
       })
 
     {:ok, bluewater} =
-      BusinessEntities.create_entity(%{name: "Bluewater Trust", entity_type: "trust", status: "active"})
+      BusinessEntities.create_entity(%{
+        name: "Bluewater Trust",
+        entity_type: "trust",
+        status: "active"
+      })
 
     {:ok, bluewater_op} =
       BusinessEntities.create_entity(%{
@@ -67,38 +76,51 @@ defmodule Logistiki.Demo.Seeds do
   @doc since: "0.1.0"
   def seed_accounts do
     tree = [
-      {"ASSETS", "asset", "debit", nil, [
-        {"ASSETS:CASH", "asset", "debit", nil, [
-          {"ASSETS:CASH:USD", "asset", "debit", nil, [
-            {"ASSETS:CASH:USD:NOSTRO", "asset", "debit", "USD", []}
+      {"ASSETS", "asset", "debit", nil,
+       [
+         {"ASSETS:CASH", "asset", "debit", nil,
+          [
+            {"ASSETS:CASH:USD", "asset", "debit", nil,
+             [
+               {"ASSETS:CASH:USD:NOSTRO", "asset", "debit", "USD", []}
+             ]}
           ]}
-        ]}
-      ]},
-      {"LIABILITIES", "liability", "credit", nil, [
-        {"LIABILITIES:CLIENT_DEPOSITS", "liability", "credit", nil, [
-          {"LIABILITIES:CLIENT_DEPOSITS:USD", "liability", "credit", nil, [
-            {"LIABILITIES:CLIENT_DEPOSITS:USD:ACME", "client", "credit", nil, [
-              {"LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "client", "credit", "USD", []},
-              {"LIABILITIES:CLIENT_DEPOSITS:USD:ACME:PAYROLL", "client", "credit", "USD", []},
-              {"LIABILITIES:CLIENT_DEPOSITS:USD:ACME:ESCROW", "client", "credit", "USD", []}
-            ]},
-            {"LIABILITIES:CLIENT_DEPOSITS:USD:BLUEWATER", "client", "credit", nil, [
-              {"LIABILITIES:CLIENT_DEPOSITS:USD:BLUEWATER:OPERATING", "client", "credit", "USD", []}
-            ]}
+       ]},
+      {"LIABILITIES", "liability", "credit", nil,
+       [
+         {"LIABILITIES:CLIENT_DEPOSITS", "liability", "credit", nil,
+          [
+            {"LIABILITIES:CLIENT_DEPOSITS:USD", "liability", "credit", nil,
+             [
+               {"LIABILITIES:CLIENT_DEPOSITS:USD:ACME", "client", "credit", nil,
+                [
+                  {"LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "client", "credit", "USD", []},
+                  {"LIABILITIES:CLIENT_DEPOSITS:USD:ACME:PAYROLL", "client", "credit", "USD", []},
+                  {"LIABILITIES:CLIENT_DEPOSITS:USD:ACME:ESCROW", "client", "credit", "USD", []}
+                ]},
+               {"LIABILITIES:CLIENT_DEPOSITS:USD:BLUEWATER", "client", "credit", nil,
+                [
+                  {"LIABILITIES:CLIENT_DEPOSITS:USD:BLUEWATER:OPERATING", "client", "credit", "USD",
+                   []}
+                ]}
+             ]}
           ]}
-        ]}
-      ]},
-      {"INCOME", "income", "credit", nil, [
-        {"INCOME:FEES", "income", "credit", nil, [
-          {"INCOME:FEES:WIRE", "fee", "credit", "USD", []}
-        ]}
-      ]},
-      {"EXPENSES", "expense", "debit", nil, [
-        {"EXPENSES:INTEREST", "expense", "debit", "USD", []}
-      ]},
-      {"SUSPENSE", "suspense", "debit", nil, [
-        {"SUSPENSE:USD", "suspense", "debit", "USD", []}
-      ]}
+       ]},
+      {"INCOME", "income", "credit", nil,
+       [
+         {"INCOME:FEES", "income", "credit", nil,
+          [
+            {"INCOME:FEES:WIRE", "fee", "credit", "USD", []}
+          ]}
+       ]},
+      {"EXPENSES", "expense", "debit", nil,
+       [
+         {"EXPENSES:INTEREST", "expense", "debit", "USD", []}
+       ]},
+      {"SUSPENSE", "suspense", "debit", nil,
+       [
+         {"SUSPENSE:USD", "suspense", "debit", "USD", []}
+       ]}
     ]
 
     build_tree(nil, tree)

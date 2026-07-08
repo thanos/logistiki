@@ -10,7 +10,13 @@ defmodule Logistiki.Accounting.InvariantValidatorTest do
   end
 
   defp posting(code, dir, amount, cur \\ "USD") do
-    %Posting{account_code: code, debit_credit: dir, amount: Decimal.new(amount), currency: cur, sequence: 1}
+    %Posting{
+      account_code: code,
+      debit_credit: dir,
+      amount: Decimal.new(amount),
+      currency: cur,
+      sequence: 1
+    }
   end
 
   defp journal(key \\ nil), do: %Journal{idempotency_key: key, status: "draft"}
@@ -27,7 +33,9 @@ defmodule Logistiki.Accounting.InvariantValidatorTest do
 
     test "rejects fewer than two postings" do
       assert {:error, %{code: :unbalanced_journal}} =
-               InvariantValidator.validate_postings([posting("ASSETS:CASH:USD:NOSTRO", "debit", "100.00")])
+               InvariantValidator.validate_postings([
+                 posting("ASSETS:CASH:USD:NOSTRO", "debit", "100.00")
+               ])
     end
 
     test "rejects unbalanced journal per currency" do
@@ -95,7 +103,8 @@ defmodule Logistiki.Accounting.InvariantValidatorTest do
         posting("LIABILITIES:CLIENT_DEPOSITS:USD:ACME", "credit", "100.00")
       ]
 
-      assert {:error, %{code: :account_not_postable}} = InvariantValidator.validate_accounts(postings)
+      assert {:error, %{code: :account_not_postable}} =
+               InvariantValidator.validate_accounts(postings)
     end
   end
 
@@ -117,7 +126,9 @@ defmodule Logistiki.Accounting.InvariantValidatorTest do
       ]
 
       assert {:ok, _} = Accounting.post_journal(journal, postings)
-      assert {:error, %{code: :duplicate_idempotency_key}} = InvariantValidator.validate_idempotency("evt:dup:policy:cash_deposit")
+
+      assert {:error, %{code: :duplicate_idempotency_key}} =
+               InvariantValidator.validate_idempotency("evt:dup:policy:cash_deposit")
     end
   end
 
@@ -133,7 +144,8 @@ defmodule Logistiki.Accounting.InvariantValidatorTest do
         posting("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "credit", "100.00")
       ]
 
-      assert {:error, %{code: :unbalanced_journal}} = InvariantValidator.validate_reversal(original, bad_reversal)
+      assert {:error, %{code: :unbalanced_journal}} =
+               InvariantValidator.validate_reversal(original, bad_reversal)
     end
   end
 

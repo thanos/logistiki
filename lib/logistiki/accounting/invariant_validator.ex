@@ -147,7 +147,8 @@ defmodule Logistiki.Accounting.InvariantValidator do
     if exists do
       {:error,
        Error.new(:duplicate_idempotency_key,
-         message: "a posted journal with idempotency key #{inspect(idempotency_key)} already exists",
+         message:
+           "a posted journal with idempotency key #{inspect(idempotency_key)} already exists",
          stage: :invariant_validation
        )}
     else
@@ -298,6 +299,7 @@ defmodule Logistiki.Accounting.InvariantValidator do
       end
     end)
   end
+
   # Requires debits to equal credits within each currency group.
   defp require_balanced_per_currency(postings) do
     postings
@@ -312,7 +314,11 @@ defmodule Logistiki.Accounting.InvariantValidator do
          {:error,
           Error.new(:unbalanced_journal,
             message: "journal debits and credits do not balance for #{currency}",
-            details: %{currency: currency, debits: Decimal.to_string(debits), credits: Decimal.to_string(credits)},
+            details: %{
+              currency: currency,
+              debits: Decimal.to_string(debits),
+              credits: Decimal.to_string(credits)
+            },
             stage: :invariant_validation
           )}}
       end
@@ -374,8 +380,13 @@ defmodule Logistiki.Accounting.InvariantValidator do
       not VirtualAccounts.posting_account?(account) ->
         {:error,
          Error.new(:account_not_postable,
-           message: "account #{inspect(code)} is not a posting account (leaf, active, posting-allowed)",
-           details: %{account_code: code, status: account.status, posting_allowed: account.posting_allowed},
+           message:
+             "account #{inspect(code)} is not a posting account (leaf, active, posting-allowed)",
+           details: %{
+             account_code: code,
+             status: account.status,
+             posting_allowed: account.posting_allowed
+           },
            stage: :invariant_validation
          )}
 

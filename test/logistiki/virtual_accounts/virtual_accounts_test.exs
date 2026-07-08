@@ -56,10 +56,18 @@ defmodule Logistiki.VirtualAccountsTest do
 
     test "rejects duplicate code" do
       assert {:ok, _} =
-               VirtualAccounts.create_account(%{code: "ASSETS", name: "Assets", account_type: "asset"})
+               VirtualAccounts.create_account(%{
+                 code: "ASSETS",
+                 name: "Assets",
+                 account_type: "asset"
+               })
 
       assert {:error, changeset} =
-               VirtualAccounts.create_account(%{code: "ASSETS", name: "Other", account_type: "asset"})
+               VirtualAccounts.create_account(%{
+                 code: "ASSETS",
+                 name: "Other",
+                 account_type: "asset"
+               })
 
       assert %{code: _} = errors_on(changeset)
     end
@@ -68,14 +76,29 @@ defmodule Logistiki.VirtualAccountsTest do
   describe "move_account/2" do
     test "prevents cycles" do
       {:ok, a} = VirtualAccounts.create_account(%{code: "A", name: "A", account_type: "asset"})
-      {:ok, b} = VirtualAccounts.create_account(%{code: "B", name: "B", account_type: "asset", parent_id: a.id})
+
+      {:ok, b} =
+        VirtualAccounts.create_account(%{
+          code: "B",
+          name: "B",
+          account_type: "asset",
+          parent_id: a.id
+        })
 
       assert {:error, :cycle_detected} = VirtualAccounts.move_account(a, b)
     end
 
     test "moves an account under a new root" do
       {:ok, a} = VirtualAccounts.create_account(%{code: "A", name: "A", account_type: "asset"})
-      {:ok, b} = VirtualAccounts.create_account(%{code: "B", name: "B", account_type: "asset", parent_id: a.id})
+
+      {:ok, b} =
+        VirtualAccounts.create_account(%{
+          code: "B",
+          name: "B",
+          account_type: "asset",
+          parent_id: a.id
+        })
+
       {:ok, c} = VirtualAccounts.create_account(%{code: "C", name: "C", account_type: "asset"})
 
       assert {:ok, moved} = VirtualAccounts.move_account(b, c)
@@ -86,7 +109,8 @@ defmodule Logistiki.VirtualAccountsTest do
 
   describe "get_account_by_code/1" do
     test "resolves by code" do
-      {:ok, _} = VirtualAccounts.create_account(%{code: "ASSETS", name: "Assets", account_type: "asset"})
+      {:ok, _} =
+        VirtualAccounts.create_account(%{code: "ASSETS", name: "Assets", account_type: "asset"})
 
       assert {:ok, found} = VirtualAccounts.get_account_by_code("ASSETS")
       assert found.code == "ASSETS"

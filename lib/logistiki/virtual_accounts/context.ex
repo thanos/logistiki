@@ -122,7 +122,8 @@ defmodule Logistiki.VirtualAccounts do
       "frozen"
   """
   @doc since: "0.1.0"
-  @spec update_account(VirtualAccount.t(), map()) :: {:ok, VirtualAccount.t()} | {:error, Ecto.Changeset.t()}
+  @spec update_account(VirtualAccount.t(), map()) ::
+          {:ok, VirtualAccount.t()} | {:error, Ecto.Changeset.t()}
   def update_account(%VirtualAccount{} = account, attrs) do
     account
     |> VirtualAccount.changeset(attrs)
@@ -348,7 +349,7 @@ defmodule Logistiki.VirtualAccounts do
   @doc since: "0.1.0"
   @spec list_children(VirtualAccount.t()) :: [VirtualAccount.t()]
   def list_children(%VirtualAccount{id: id}) do
-    Repo.all(from a in VirtualAccount, where: a.parent_id == ^id, order_by: [asc: a.code])
+    Repo.all(from(a in VirtualAccount, where: a.parent_id == ^id, order_by: [asc: a.code]))
   end
 
   @doc """
@@ -475,7 +476,8 @@ defmodule Logistiki.VirtualAccounts do
   end
 
   @doc false
-  @spec insert_closure_for(VirtualAccount.t()) :: {:ok, :root | :child} | {:error, :parent_closure_missing}
+  @spec insert_closure_for(VirtualAccount.t()) ::
+          {:ok, :root | :child} | {:error, :parent_closure_missing}
   def insert_closure_for(%VirtualAccount{id: id, parent_id: nil}) do
     insert_self_closure(id)
     {:ok, :root}
@@ -540,8 +542,10 @@ defmodule Logistiki.VirtualAccounts do
   # Rewrites the closure for a subtree moved under a new parent. For every
   # descendant d of id and every ancestor a of the new parent, adds
   # closure(a, d, depth(a, parent) + depth(id, d) + 1).
-  defp link_subtree_under_new_parent(%VirtualAccount{id: id, parent_id: nil}) do
-    insert_self_closure(id)
+  defp link_subtree_under_new_parent(%VirtualAccount{id: _id, parent_id: nil}) do
+    # When moving to root, the self-closure row already exists from the original
+    # insert. The delete_old_closure_on_move already removed the inherited rows.
+    # Nothing more to do — the self-row is preserved.
     {:ok, :root}
   end
 
@@ -577,16 +581,20 @@ defmodule Logistiki.VirtualAccounts do
 
   # Base query for descendants (depth > 0) of `id` via the closure table.
   defp descendants_query(id) do
-    from a in VirtualAccount,
-      join: c in VirtualAccountClosure, on: c.descendant_id == a.id,
+    from(a in VirtualAccount,
+      join: c in VirtualAccountClosure,
+      on: c.descendant_id == a.id,
       where: c.ancestor_id == ^id and c.depth > 0
+    )
   end
 
   # Base query for ancestors (depth > 0) of `id` via the closure table.
   defp ancestors_query(id) do
-    from a in VirtualAccount,
-      join: c in VirtualAccountClosure, on: c.ancestor_id == a.id,
+    from(a in VirtualAccount,
+      join: c in VirtualAccountClosure,
+      on: c.ancestor_id == a.id,
       where: c.descendant_id == ^id and c.depth > 0
+    )
   end
 
   @doc """
@@ -611,7 +619,7 @@ defmodule Logistiki.VirtualAccounts do
   @doc since: "0.1.0"
   @spec descendant_ids(VirtualAccount.t()) :: [integer()]
   def descendant_ids(%VirtualAccount{id: id}) do
-    Repo.all(from c in VirtualAccountClosure, where: c.ancestor_id == ^id, select: c.descendant_id)
+    Repo.all(from(c in VirtualAccountClosure, where: c.ancestor_id == ^id, select: c.descendant_id))
   end
 
   @doc """
@@ -633,7 +641,7 @@ defmodule Logistiki.VirtualAccounts do
   @doc since: "0.1.0"
   @spec ancestor_ids(VirtualAccount.t()) :: [integer()]
   def ancestor_ids(%VirtualAccount{id: id}) do
-    Repo.all(from c in VirtualAccountClosure, where: c.descendant_id == ^id, select: c.ancestor_id)
+    Repo.all(from(c in VirtualAccountClosure, where: c.descendant_id == ^id, select: c.ancestor_id))
   end
 
   @doc """

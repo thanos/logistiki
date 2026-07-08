@@ -1,5 +1,12 @@
 # Logistiki
 
+
+[![Hex.pm Version](https://img.shields.io/hexpm/v/logistiki.svg)](https://hex.pm/packages/logistiki)
+[![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/logistiki)
+[![Hex.pm License](https://img.shields.io/hexpm/l/logistiki.svg)](https://hex.pm/packages/logistiki)
+[![CI](https://github.com/thanos/logistiki/actions/workflows/ci.yml/badge.svg)](https://github.com/thanos/logistiki/actions/workflows/ci.yml)
+[![Coverage](https://coveralls.io/repos/github/thanos/logistiki/badge.svg?branch=main)](https://coveralls.io/github/thanos/logistiki)
+
 > An embedded OTP accounting engine for Elixir applications.
 
 Logistiki is the accounting execution layer that applications embed. It is **not**

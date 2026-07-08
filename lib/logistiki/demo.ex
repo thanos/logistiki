@@ -63,7 +63,11 @@ defmodule Logistiki.Demo do
 
     IO.puts("6-8. Selected policy and generated journal/postings:")
     IO.puts("   policy: #{inspect(deposit_result.policy)}")
-    IO.puts("   journal: #{inspect(deposit_result.journal && deposit_result.journal.id)} (#{deposit_result.journal && deposit_result.journal.status})")
+
+    IO.puts(
+      "   journal: #{inspect(deposit_result.journal && deposit_result.journal.id)} (#{deposit_result.journal && deposit_result.journal.status})"
+    )
+
     IO.puts("   postings: #{length(deposit_result.postings)}")
 
     IO.puts("9-10. Show balance...")
@@ -72,6 +76,7 @@ defmodule Logistiki.Demo do
 
     IO.puts("11. Show statement...")
     {:ok, lines} = Logistiki.statement(operating)
+
     Enum.each(lines, fn line ->
       IO.puts(
         "   #{Date.to_string(line.date)} #{line.account_code} " <>
@@ -85,7 +90,10 @@ defmodule Logistiki.Demo do
     print_result("fee", fee_result)
 
     IO.puts("13. Reverse the mistaken fee...")
-    {:ok, reversal} = Logistiki.Ledger.reverse_journal(fee_result.journal, %{reason: "mistaken fee"})
+
+    {:ok, reversal} =
+      Logistiki.Ledger.reverse_journal(fee_result.journal, %{reason: "mistaken fee"})
+
     IO.puts("   reversal journal #{reversal.journal_id} posted")
 
     IO.puts("14. Show balance restored...")
@@ -112,7 +120,9 @@ defmodule Logistiki.Demo do
 
   # print_result — private helper.
   defp print_result(label, %{policy: policy, journal: journal}) do
-    IO.puts("   #{label}: policy=#{inspect(policy)} journal=#{inspect(journal && journal.id)} status=#{inspect(journal && journal.status)}")
+    IO.puts(
+      "   #{label}: policy=#{inspect(policy)} journal=#{inspect(journal && journal.id)} status=#{inspect(journal && journal.status)}"
+    )
   end
 
   # fmt — private helper.

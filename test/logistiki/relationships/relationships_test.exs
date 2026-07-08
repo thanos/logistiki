@@ -7,9 +7,30 @@ defmodule Logistiki.RelationshipsTest do
 
   setup do
     {:ok, entity} = BusinessEntities.create_entity(%{name: "Acme", entity_type: "company"})
-    {:ok, child_entity} = BusinessEntities.create_entity(%{name: "Acme Trading", entity_type: "company", parent_id: entity.id})
-    {:ok, root} = VirtualAccounts.create_account(%{code: "LIAB", name: "Liabilities", account_type: "liability"})
-    {:ok, account} = VirtualAccounts.create_account(%{code: "LIAB:ACME", name: "Acme", account_type: "client", currency: "USD", posting_allowed: true, parent_id: root.id})
+
+    {:ok, child_entity} =
+      BusinessEntities.create_entity(%{
+        name: "Acme Trading",
+        entity_type: "company",
+        parent_id: entity.id
+      })
+
+    {:ok, root} =
+      VirtualAccounts.create_account(%{
+        code: "LIAB",
+        name: "Liabilities",
+        account_type: "liability"
+      })
+
+    {:ok, account} =
+      VirtualAccounts.create_account(%{
+        code: "LIAB:ACME",
+        name: "Acme",
+        account_type: "client",
+        currency: "USD",
+        posting_allowed: true,
+        parent_id: root.id
+      })
 
     %{entity: entity, child_entity: child_entity, account: account, root: root}
   end
@@ -25,7 +46,10 @@ defmodule Logistiki.RelationshipsTest do
     assert listed_entity.id == entity.id
   end
 
-  test "allows multiple relationship types between the same pair", %{entity: entity, account: account} do
+  test "allows multiple relationship types between the same pair", %{
+    entity: entity,
+    account: account
+  } do
     assert {:ok, _} = Relationships.link_entity_account(entity, account, :owner)
     assert {:ok, _} = Relationships.link_entity_account(entity, account, :beneficiary)
 
@@ -38,7 +62,11 @@ defmodule Logistiki.RelationshipsTest do
     assert types == 2
   end
 
-  test "lists accounts for an entity subtree", %{entity: entity, child_entity: child, account: account} do
+  test "lists accounts for an entity subtree", %{
+    entity: entity,
+    child_entity: child,
+    account: account
+  } do
     assert {:ok, _} = Relationships.link_entity_account(child, account, :owner)
     assert [listed] = Relationships.list_accounts_for_entity_tree(entity)
     assert listed.id == account.id

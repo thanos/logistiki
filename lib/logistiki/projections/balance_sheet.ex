@@ -18,7 +18,9 @@ defmodule Logistiki.Projections.BalanceSheet do
           assets: section(),
           liabilities: section(),
           equity: section(),
-          totals_by_currency: %{String.t() => %{assets: Decimal.t(), liabilities: Decimal.t(), equity: Decimal.t()}}
+          totals_by_currency: %{
+            String.t() => %{assets: Decimal.t(), liabilities: Decimal.t(), equity: Decimal.t()}
+          }
         }
 
   defstruct assets: %{balances: [], totals_by_currency: %{}},

@@ -81,9 +81,21 @@ defmodule Logistiki.Knowledge.Facts do
     |> add_if(:event_product, [@event_id, to_atom(event.product_code)], event.product_code)
     |> add_if(:event_account, [@event_id, event.account_code], event.account_code)
     |> add_if(:event_cash_account, [@event_id, event.cash_account_code], event.cash_account_code)
-    |> add_if(:event_fee_income_account, [@event_id, event.fee_income_account_code], event.fee_income_account_code)
-    |> add_if(:event_interest_expense_account, [@event_id, event.interest_expense_account_code], event.interest_expense_account_code)
-    |> add_if(:event_destination_account, [@event_id, event.destination_account_code], event.destination_account_code)
+    |> add_if(
+      :event_fee_income_account,
+      [@event_id, event.fee_income_account_code],
+      event.fee_income_account_code
+    )
+    |> add_if(
+      :event_interest_expense_account,
+      [@event_id, event.interest_expense_account_code],
+      event.interest_expense_account_code
+    )
+    |> add_if(
+      :event_destination_account,
+      [@event_id, event.destination_account_code],
+      event.destination_account_code
+    )
   end
 
   # Appends a fact to the list.

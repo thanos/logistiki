@@ -26,12 +26,18 @@ defmodule Logistiki.PropertyTest do
   defp balanced_journal_gen do
     bind(amount_gen(), fn amount ->
       bind(member_of(["ASSETS:CASH:USD:NOSTRO", "SUSPENSE:USD"]), fn debit_code ->
-        bind(member_of(["LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:PAYROLL"]), fn credit_code ->
-          constant([
-            posting(debit_code, "debit", amount),
-            posting(credit_code, "credit", amount)
-          ])
-        end)
+        bind(
+          member_of([
+            "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING",
+            "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:PAYROLL"
+          ]),
+          fn credit_code ->
+            constant([
+              posting(debit_code, "debit", amount),
+              posting(credit_code, "credit", amount)
+            ])
+          end
+        )
       end)
     end)
   end
@@ -63,10 +69,17 @@ defmodule Logistiki.PropertyTest do
   property "reversal exactly restores affected balances" do
     check all(amount <- amount_gen()) do
       # Process a deposit of `amount`, then reverse it, and confirm zero balance.
-      event = Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", Decimal.to_string(amount))
+      event =
+        Seeds.deposit_event(
+          "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING",
+          Decimal.to_string(amount)
+        )
 
       assert {:ok, result} = Logistiki.process(event)
-      assert {:ok, reversal} = Logistiki.Ledger.reverse_journal(result.journal, %{reason: "property"})
+
+      assert {:ok, reversal} =
+               Logistiki.Ledger.reverse_journal(result.journal, %{reason: "property"})
+
       assert reversal.status == :ok
 
       assert {:ok, [cash]} = Logistiki.balance("ASSETS:CASH:USD:NOSTRO")
@@ -76,10 +89,17 @@ defmodule Logistiki.PropertyTest do
 
   property "parent account balance equals the sum of descendant balances" do
     check all(amount <- amount_gen()) do
-      event = Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", Decimal.to_string(amount))
+      event =
+        Seeds.deposit_event(
+          "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING",
+          Decimal.to_string(amount)
+        )
+
       assert {:ok, _} = Logistiki.process(event)
 
-      assert {:ok, leaf_balances} = Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+      assert {:ok, leaf_balances} =
+               Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+
       assert {:ok, parent_balances} = Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME")
 
       leaf_net = Enum.reduce(leaf_balances, Decimal.new(0), &Decimal.add(&1.net, &2))
@@ -91,8 +111,14 @@ defmodule Logistiki.PropertyTest do
 
   property "posting order does not change the final balance" do
     check all(amount <- amount_gen()) do
-      event1 = Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", Decimal.to_string(amount))
-      event2 = Seeds.fee_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", Decimal.to_string(amount))
+      event1 =
+        Seeds.deposit_event(
+          "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING",
+          Decimal.to_string(amount)
+        )
+
+      event2 =
+        Seeds.fee_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", Decimal.to_string(amount))
 
       assert {:ok, _} = Logistiki.process(event1)
       assert {:ok, _} = Logistiki.process(event2)
@@ -106,7 +132,13 @@ defmodule Logistiki.PropertyTest do
   property "simulation and beancount backends agree on deposit balances" do
     check all(amount <- amount_gen()) do
       Logistiki.put_ledger_backend(Logistiki.Ledger.Simulation)
-      event = Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", Decimal.to_string(amount))
+
+      event =
+        Seeds.deposit_event(
+          "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING",
+          Decimal.to_string(amount)
+        )
+
       assert {:ok, _} = Logistiki.process(event)
 
       assert {:ok, [sim_cash]} = Logistiki.balance("ASSETS:CASH:USD:NOSTRO")

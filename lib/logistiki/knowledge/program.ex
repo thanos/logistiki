@@ -63,62 +63,62 @@ defmodule Logistiki.Knowledge.Program do
   # ------------------------------------------------------------------
 
   relation :event_type do
-    field :event, :atom
-    field :type, :atom
+    field(:event, :atom)
+    field(:type, :atom)
   end
 
   relation :event_amount_cents do
-    field :event, :atom
-    field :cents, :integer
+    field(:event, :atom)
+    field(:cents, :integer)
   end
 
   relation :event_currency do
-    field :event, :atom
-    field :currency, :string
+    field(:event, :atom)
+    field(:currency, :string)
   end
 
   relation :event_fee_type do
-    field :event, :atom
-    field :fee_type, :atom
+    field(:event, :atom)
+    field(:fee_type, :atom)
   end
 
   relation :event_entity_type do
-    field :event, :atom
-    field :entity_type, :atom
+    field(:event, :atom)
+    field(:entity_type, :atom)
   end
 
   relation :event_product do
-    field :event, :atom
-    field :product, :atom
+    field(:event, :atom)
+    field(:product, :atom)
   end
 
   relation :event_account do
-    field :event, :atom
-    field :code, :string
+    field(:event, :atom)
+    field(:code, :string)
   end
 
   relation :event_cash_account do
-    field :event, :atom
-    field :code, :string
+    field(:event, :atom)
+    field(:code, :string)
   end
 
   relation :event_fee_income_account do
-    field :event, :atom
-    field :code, :string
+    field(:event, :atom)
+    field(:code, :string)
   end
 
   relation :event_interest_expense_account do
-    field :event, :atom
-    field :code, :string
+    field(:event, :atom)
+    field(:code, :string)
   end
 
   relation :event_destination_account do
-    field :event, :atom
-    field :code, :string
+    field(:event, :atom)
+    field(:code, :string)
   end
 
   relation :sanctions_match do
-    field :event, :atom
+    field(:event, :atom)
   end
 
   # ------------------------------------------------------------------
@@ -126,11 +126,11 @@ defmodule Logistiki.Knowledge.Program do
   # ------------------------------------------------------------------
 
   relation :blocked do
-    field :event, :atom
+    field(:event, :atom)
   end
 
   relation :requires_approval do
-    field :event, :atom
+    field(:event, :atom)
   end
 
   # ------------------------------------------------------------------
@@ -138,8 +138,8 @@ defmodule Logistiki.Knowledge.Program do
   # ------------------------------------------------------------------
 
   relation :policy do
-    field :event, :atom
-    field :policy, :atom
+    field(:event, :atom)
+    field(:policy, :atom)
   end
 
   # ------------------------------------------------------------------
@@ -147,44 +147,44 @@ defmodule Logistiki.Knowledge.Program do
   # ------------------------------------------------------------------
 
   relation :template do
-    field :policy, :atom
+    field(:policy, :atom)
   end
 
   relation :template_posting do
-    field :policy, :atom
-    field :sequence, :integer
-    field :direction, :atom
-    field :role, :atom
-    field :amount_var, :atom
-    field :currency_var, :atom
+    field(:policy, :atom)
+    field(:sequence, :integer)
+    field(:direction, :atom)
+    field(:role, :atom)
+    field(:amount_var, :atom)
+    field(:currency_var, :atom)
   end
 
   relation :requires_dimension do
-    field :policy, :atom
-    field :dimension, :atom
+    field(:policy, :atom)
+    field(:dimension, :atom)
   end
 
   relation :account_role_static do
-    field :role, :atom
-    field :code, :string
+    field(:role, :atom)
+    field(:code, :string)
   end
 
   relation :account_role do
-    field :event, :atom
-    field :role, :atom
-    field :code, :string
+    field(:event, :atom)
+    field(:role, :atom)
+    field(:code, :string)
   end
 
   # ------------------------------------------------------------------
   # Static facts: templates and postings
   # ------------------------------------------------------------------
 
-  fact template(:cash_deposit)
-  fact template(:corporate_wire_fee)
-  fact template(:retail_wire_fee)
-  fact template(:internal_transfer)
-  fact template(:interest_accrual)
-  fact template(:refund_paid)
+  fact(template(:cash_deposit))
+  fact(template(:corporate_wire_fee))
+  fact(template(:retail_wire_fee))
+  fact(template(:internal_transfer))
+  fact(template(:interest_accrual))
+  fact(template(:refund_paid))
 
   # cash_deposit: debit cash, credit client liability
   facts :template_posting do
@@ -252,7 +252,7 @@ defmodule Logistiki.Knowledge.Program do
   # not carry the concrete account code for a role).
   # ------------------------------------------------------------------
 
-  fact account_role_static(:interest_expense_account, "EXPENSES:INTEREST")
+  fact(account_role_static(:interest_expense_account, "EXPENSES:INTEREST"))
 
   # ------------------------------------------------------------------
   # Rules: business rules
@@ -335,17 +335,17 @@ defmodule Logistiki.Knowledge.Program do
   # ------------------------------------------------------------------
 
   query :selected_policy do
-    find P
-    where policy(:evt, P)
+    find(P)
+    where(policy(:evt, P))
   end
 
   query :account_roles do
-    find R, C
-    where account_role(:evt, R, C)
+    find(R, C)
+    where(account_role(:evt, R, C))
   end
 
   query :template_postings do
-    find P, S, D, R, A, C
-    where template_posting(P, S, D, R, A, C)
+    find(P, S, D, R, A, C)
+    where(template_posting(P, S, D, R, A, C))
   end
 end

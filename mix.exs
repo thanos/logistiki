@@ -14,12 +14,25 @@ defmodule Logistiki.MixProject do
       aliases: aliases(),
       deps: deps(),
       package: package(),
-      docs: docs()
+      docs: docs(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test
+      ]
     ]
   end
 
   def cli do
-    [preferred_envs: [credo: :dev, "test.watch": :test]]
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test,
+        credo: :dev
+      ]
+    ]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -42,6 +55,8 @@ defmodule Logistiki.MixProject do
       {:decimal, "~> 3.1"},
       {:telemetry, "~> 1.0"},
       {:stream_data, "~> 1.0", only: [:test, :dev]},
+      {:excoveralls, "~> 0.18", only: :test},
+      {:mox, "~> 1.2", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}

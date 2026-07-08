@@ -26,6 +26,6 @@ defmodule Logistiki.Event.RefundIssued do
   use Logistiki.Event, type: "refund_issued"
 
   defevent do
-    field :cash_account_code, :string
+    field(:cash_account_code, :string)
   end
 end

@@ -20,7 +20,15 @@ defmodule Logistiki.Projections.Balance do
           posting_count: non_neg_integer()
         }
 
-  defstruct [:account_id, :account_code, :currency, debit_total: Decimal.new(0), credit_total: Decimal.new(0), net: Decimal.new(0), posting_count: 0]
+  defstruct [
+    :account_id,
+    :account_code,
+    :currency,
+    debit_total: Decimal.new(0),
+    credit_total: Decimal.new(0),
+    net: Decimal.new(0),
+    posting_count: 0
+  ]
 
   @doc "Builds a balance from a row of `{debit_total, credit_total, count}` for `currency`."
   @doc since: "0.1.0"

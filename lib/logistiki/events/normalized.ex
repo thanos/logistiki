@@ -121,30 +121,30 @@ defmodule Logistiki.Event.Normalized do
 
   @primary_key false
   embedded_schema do
-    field :id, :string
-    field :type, :string
-    field :source_system, :string
-    field :source_id, :string
-    field :actor_id, :string
-    field :occurred_at, :utc_datetime
-    field :effective_date, :date
-    field :amount, :decimal
-    field :currency, :string
-    field :entity_id, :string
-    field :account_id, :string
-    field :account_code, :string
-    field :cash_account_code, :string
-    field :fee_income_account_code, :string
-    field :interest_expense_account_code, :string
-    field :destination_account_code, :string
-    field :counterparty_account_code, :string
-    field :counterparty_id, :string
-    field :product_code, :string
-    field :jurisdiction, :string
-    field :fee_type, :string
-    field :entity_type, :string
-    field :has_accounting_impact, :boolean, default: true
-    field :metadata, :map, default: %{}
+    field(:id, :string)
+    field(:type, :string)
+    field(:source_system, :string)
+    field(:source_id, :string)
+    field(:actor_id, :string)
+    field(:occurred_at, :utc_datetime)
+    field(:effective_date, :date)
+    field(:amount, :decimal)
+    field(:currency, :string)
+    field(:entity_id, :string)
+    field(:account_id, :string)
+    field(:account_code, :string)
+    field(:cash_account_code, :string)
+    field(:fee_income_account_code, :string)
+    field(:interest_expense_account_code, :string)
+    field(:destination_account_code, :string)
+    field(:counterparty_account_code, :string)
+    field(:counterparty_id, :string)
+    field(:product_code, :string)
+    field(:jurisdiction, :string)
+    field(:fee_type, :string)
+    field(:entity_type, :string)
+    field(:has_accounting_impact, :boolean, default: true)
+    field(:metadata, :map, default: %{})
   end
 
   @doc """

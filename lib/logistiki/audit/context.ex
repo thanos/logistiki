@@ -137,9 +137,10 @@ defmodule Logistiki.Audit do
   @spec trail_for_event(String.t() | atom()) :: [AuditEvent.t()]
   def trail_for_event(event_id) do
     Repo.all(
-      from a in AuditEvent,
+      from(a in AuditEvent,
         where: a.event_id == ^to_string(event_id),
         order_by: [asc: a.inserted_at]
+      )
     )
   end
 
@@ -164,9 +165,10 @@ defmodule Logistiki.Audit do
   @spec trail_for_journal(integer()) :: [AuditEvent.t()]
   def trail_for_journal(journal_id) do
     Repo.all(
-      from a in AuditEvent,
+      from(a in AuditEvent,
         where: a.journal_id == ^journal_id,
         order_by: [asc: a.inserted_at]
+      )
     )
   end
 

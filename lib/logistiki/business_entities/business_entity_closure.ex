@@ -31,11 +31,11 @@ defmodule Logistiki.BusinessEntities.BusinessEntityClosure do
 
   schema "business_entity_closure" do
     # Ancestor entity id. Example: `1` (Acme Holdings)
-    field :ancestor_id, :integer
+    field(:ancestor_id, :integer)
     # Descendant entity id. Example: `2` (Acme Trading Ltd)
-    field :descendant_id, :integer
+    field(:descendant_id, :integer)
     # Depth in the hierarchy: 0 for self, 1 for direct child, 2 for grandchild. Example: `1`
-    field :depth, :integer
+    field(:depth, :integer)
 
     timestamps(type: :utc_datetime, updated_at: false)
   end

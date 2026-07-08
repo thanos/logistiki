@@ -47,16 +47,16 @@ defmodule Logistiki.Relationships.EntityAccount do
 
   schema "entity_accounts" do
     # Relationship type, one of `relationship_types/0`. Example: `\"owner\"`, `\"beneficiary\"`
-    field :relationship_type, :string
+    field(:relationship_type, :string)
     # Date the relationship became active (required). Example: `~D[2026-07-07]`
-    field :valid_from, :date
+    field(:valid_from, :date)
     # Date the relationship ended; `nil` while active. Example: `nil` or `~D[2026-12-31]`
-    field :valid_to, :date
+    field(:valid_to, :date)
     # Extensible key/value metadata. Default: `%{}`. Example: `%{\"note\" => \"joint\"}`
-    field :metadata, :map, default: %{}
+    field(:metadata, :map, default: %{})
 
-    belongs_to :business_entity, Logistiki.BusinessEntities.BusinessEntity
-    belongs_to :virtual_account, Logistiki.VirtualAccounts.VirtualAccount
+    belongs_to(:business_entity, Logistiki.BusinessEntities.BusinessEntity)
+    belongs_to(:virtual_account, Logistiki.VirtualAccounts.VirtualAccount)
 
     timestamps(type: :utc_datetime)
   end
@@ -127,7 +127,12 @@ defmodule Logistiki.Relationships.EntityAccount do
       :valid_to,
       :metadata
     ])
-    |> validate_required([:business_entity_id, :virtual_account_id, :relationship_type, :valid_from])
+    |> validate_required([
+      :business_entity_id,
+      :virtual_account_id,
+      :relationship_type,
+      :valid_from
+    ])
     |> validate_inclusion(:relationship_type, Enum.map(@relationship_types, &Atom.to_string/1))
     |> unique_constraint(
       :relationship_type,
@@ -142,8 +147,12 @@ defmodule Logistiki.Relationships.EntityAccount do
     to = get_field(changeset, :valid_to)
 
     case {from, to} do
-      {_, nil} -> changeset
-      {nil, _} -> changeset
+      {_, nil} ->
+        changeset
+
+      {nil, _} ->
+        changeset
+
       {from, to} ->
         if Date.compare(to, from) == :lt do
           add_error(changeset, :valid_to, "must be on or after valid_from")

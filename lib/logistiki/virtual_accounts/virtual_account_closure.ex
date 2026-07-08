@@ -31,11 +31,11 @@ defmodule Logistiki.VirtualAccounts.VirtualAccountClosure do
 
   schema "virtual_account_closure" do
     # Ancestor account id. Example: `1` (ASSETS)
-    field :ancestor_id, :integer
+    field(:ancestor_id, :integer)
     # Descendant account id. Example: `4` (ASSETS:CASH:USD:NOSTRO)
-    field :descendant_id, :integer
+    field(:descendant_id, :integer)
     # Depth in the hierarchy: 0 for self, 1 for direct child, 2 for grandchild. Example: `3`
-    field :depth, :integer
+    field(:depth, :integer)
 
     timestamps(type: :utc_datetime, updated_at: false)
   end

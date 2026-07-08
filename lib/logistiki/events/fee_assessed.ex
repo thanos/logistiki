@@ -30,7 +30,7 @@ defmodule Logistiki.Event.FeeAssessed do
   use Logistiki.Event, type: "fee_assessed"
 
   defevent do
-    field :fee_income_account_code, :string
-    field :fee_type, :string
+    field(:fee_income_account_code, :string)
+    field(:fee_type, :string)
   end
 end

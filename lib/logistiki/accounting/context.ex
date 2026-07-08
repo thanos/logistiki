@@ -83,7 +83,7 @@ defmodule Logistiki.Accounting do
   """
   @doc since: "0.1.0"
   def list_postings(%Journal{id: id}) do
-    Repo.all(from p in Posting, where: p.journal_id == ^id, order_by: [asc: p.sequence])
+    Repo.all(from(p in Posting, where: p.journal_id == ^id, order_by: [asc: p.sequence]))
   end
 
   @doc """
@@ -158,7 +158,8 @@ defmodule Logistiki.Accounting do
   end
 
   def post_journal(%Journal{status: status}, _postings) do
-    {:error, Error.new(:immutable_journal, message: "only draft journals can be posted, got #{status}")}
+    {:error,
+     Error.new(:immutable_journal, message: "only draft journals can be posted, got #{status}")}
   end
 
   @doc """
@@ -199,7 +200,8 @@ defmodule Logistiki.Accounting do
   end
 
   def reverse_journal(%Journal{status: status}, _attrs) do
-    {:error, Error.new(:immutable_journal, message: "only posted journals can be reversed, got #{status}")}
+    {:error,
+     Error.new(:immutable_journal, message: "only posted journals can be reversed, got #{status}")}
   end
 
   @doc """
@@ -253,6 +255,15 @@ defmodule Logistiki.Accounting do
 
   # to_error — private helper.
   defp to_error(%Error{} = error), do: error
-  defp to_error(%Ecto.Changeset{} = cs), do: Error.new(:backend_error, message: "persistence failed", details: inspect(cs), stage: :persistence)
-  defp to_error(reason), do: Error.new(:backend_error, message: inspect(reason), stage: :persistence)
+
+  defp to_error(%Ecto.Changeset{} = cs),
+    do:
+      Error.new(:backend_error,
+        message: "persistence failed",
+        details: inspect(cs),
+        stage: :persistence
+      )
+
+  defp to_error(reason),
+    do: Error.new(:backend_error, message: inspect(reason), stage: :persistence)
 end

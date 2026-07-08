@@ -12,7 +12,10 @@ defmodule Logistiki.ProjectionsTest do
 
   describe "balance projections" do
     test "leaf balance reflects a posting", %{accounts: accounts} do
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00"))
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00")
+               )
 
       assert {:ok, [cash]} = Logistiki.balance("ASSETS:CASH:USD:NOSTRO")
       assert Decimal.equal?(cash.net, Decimal.new("500.00"))
@@ -20,8 +23,15 @@ defmodule Logistiki.ProjectionsTest do
     end
 
     test "parent balance aggregates descendants", %{accounts: accounts} do
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00"))
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:PAYROLL", "300.00"))
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00")
+               )
+
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:PAYROLL", "300.00")
+               )
 
       assert {:ok, balances} = Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME")
       net = Enum.reduce(balances, Decimal.new(0), &Decimal.add(&1.net, &2))
@@ -29,7 +39,10 @@ defmodule Logistiki.ProjectionsTest do
     end
 
     test "balance_for_entity aggregates linked accounts", %{entities: entities} do
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00"))
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00")
+               )
 
       assert {:ok, balances} = Logistiki.balance_for_entity(entities.acme_holdings)
       net = Enum.reduce(balances, Decimal.new(0), &Decimal.add(&1.net, &2))
@@ -37,8 +50,18 @@ defmodule Logistiki.ProjectionsTest do
     end
 
     test "balance_for_entity_tree aggregates across the entity subtree", %{entities: entities} do
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00"))
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:BLUEWATER:OPERATING", "200.00"))
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00")
+               )
+
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event(
+                   "LIABILITIES:CLIENT_DEPOSITS:USD:BLUEWATER:OPERATING",
+                   "200.00"
+                 )
+               )
 
       assert {:ok, balances} = Logistiki.balance_for_entity_tree(entities.acme_holdings)
       net = Enum.reduce(balances, Decimal.new(0), &Decimal.add(&1.net, &2))
@@ -49,8 +72,15 @@ defmodule Logistiki.ProjectionsTest do
 
   describe "statement projections" do
     test "statement produces ordered running balances", %{accounts: accounts} do
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00"))
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "250.00"))
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00")
+               )
+
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "250.00")
+               )
 
       assert {:ok, lines} = Logistiki.statement("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
       assert length(lines) == 2
@@ -63,8 +93,15 @@ defmodule Logistiki.ProjectionsTest do
 
   describe "trial balance" do
     test "trial balance balances per currency", %{accounts: accounts} do
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00"))
-      assert {:ok, _} = Logistiki.process(Seeds.fee_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "25.00"))
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00")
+               )
+
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.fee_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "25.00")
+               )
 
       assert {:ok, tb} = Logistiki.trial_balance()
       assert "USD" in tb.currencies
@@ -74,7 +111,10 @@ defmodule Logistiki.ProjectionsTest do
 
   describe "balance sheet and income statement" do
     test "balance sheet separates assets, liabilities, equity", %{accounts: accounts} do
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00"))
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00")
+               )
 
       bs = Logistiki.balance_sheet()
       assert length(bs.assets.balances) == 1
@@ -84,8 +124,15 @@ defmodule Logistiki.ProjectionsTest do
     end
 
     test "income statement separates income and expenses with net profit", %{accounts: accounts} do
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "1000.00"))
-      assert {:ok, _} = Logistiki.process(Seeds.fee_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "25.00"))
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "1000.00")
+               )
+
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.fee_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "25.00")
+               )
 
       is = Logistiki.income_statement()
       assert length(is.income.balances) == 1
@@ -96,7 +143,10 @@ defmodule Logistiki.ProjectionsTest do
 
   describe "general ledger" do
     test "general ledger lists all postings" do
-      assert {:ok, _} = Logistiki.process(Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00"))
+      assert {:ok, _} =
+               Logistiki.process(
+                 Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "500.00")
+               )
 
       gl = Logistiki.general_ledger()
       assert length(gl.lines) == 2

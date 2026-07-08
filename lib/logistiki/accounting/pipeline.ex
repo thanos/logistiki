@@ -103,7 +103,10 @@ defmodule Logistiki.Accounting.Pipeline do
       {:no_impact, normalized, pre_stages} ->
         Telemetry.stop([:logistiki, :event, :process], start_mono, %{policy: nil})
 
-        stages = pre_stages ++ [%{action: :no_accounting_impact, resource_type: :event, resource_id: normalized.id}]
+        stages =
+          pre_stages ++
+            [%{action: :no_accounting_impact, resource_type: :event, resource_id: normalized.id}]
+
         {:ok, audit_evidence_id, _} = audit_stage(normalized, nil, nil, stages)
 
         {:ok,
@@ -141,7 +144,11 @@ defmodule Logistiki.Accounting.Pipeline do
          }}
 
       {:error, reason} ->
-        {:error, Error.new(:invalid_event, message: "event normalization failed: #{inspect(reason)}", stage: :normalization)}
+        {:error,
+         Error.new(:invalid_event,
+           message: "event normalization failed: #{inspect(reason)}",
+           stage: :normalization
+         )}
     end
   end
 
@@ -175,9 +182,10 @@ defmodule Logistiki.Accounting.Pipeline do
 
     case Knowledge.evaluate(normalized) do
       {:ok, result} ->
-        Telemetry.emit([:logistiki, :knowledge, :evaluate, :stop], %{},
-          %{event_type: normalized.type, policy: result.policy}
-        )
+        Telemetry.emit([:logistiki, :knowledge, :evaluate, :stop], %{}, %{
+          event_type: normalized.type,
+          policy: result.policy
+        })
 
         {:ok, result,
          %{
@@ -188,7 +196,11 @@ defmodule Logistiki.Accounting.Pipeline do
          }}
 
       {:error, reason} ->
-        {:error, Error.new(:no_policy_found, message: "knowledge evaluation failed: #{inspect(reason)}", stage: :policy_selection)}
+        {:error,
+         Error.new(:no_policy_found,
+           message: "knowledge evaluation failed: #{inspect(reason)}",
+           stage: :policy_selection
+         )}
     end
   end
 
@@ -227,7 +239,12 @@ defmodule Logistiki.Accounting.Pipeline do
   # journal_stage — private helper.
   defp journal_stage(%{policy: nil} = result, normalized) do
     {:ok, nil, [], JournalBuilder.build(result, normalized) |> elem(2),
-     %{action: :policy_selected, resource_type: :policy, resource_id: nil, explanation: %{policy: nil}}}
+     %{
+       action: :policy_selected,
+       resource_type: :policy,
+       resource_id: nil,
+       explanation: %{policy: nil}
+     }}
   end
 
   # journal_stage — private helper.
@@ -237,16 +254,21 @@ defmodule Logistiki.Accounting.Pipeline do
 
     case JournalBuilder.build(result, normalized) do
       {:ok, journal, postings, explanation} ->
-        Telemetry.emit([:logistiki, :journal, :build, :stop], %{},
-          %{policy: result.policy, posting_count: length(postings)}
-        )
+        Telemetry.emit([:logistiki, :journal, :build, :stop], %{}, %{
+          policy: result.policy,
+          posting_count: length(postings)
+        })
 
         {:ok, journal, postings, explanation,
          %{
            action: :journal_built,
            resource_type: :journal,
            resource_id: nil,
-           explanation: %{policy: result.policy, template: result.template, posting_count: length(postings)}
+           explanation: %{
+             policy: result.policy,
+             template: result.template,
+             posting_count: length(postings)
+           }
          }}
 
       {:error, %Error{} = error} ->
@@ -256,7 +278,13 @@ defmodule Logistiki.Accounting.Pipeline do
 
   # invariant_stage — private helper.
   defp invariant_stage(nil, []) do
-    {:ok, %{action: :invariant_validation_succeeded, resource_type: :journal, resource_id: nil, explanation: %{journal: nil}}}
+    {:ok,
+     %{
+       action: :invariant_validation_succeeded,
+       resource_type: :journal,
+       resource_id: nil,
+       explanation: %{journal: nil}
+     }}
   end
 
   # invariant_stage — private helper.
@@ -281,7 +309,13 @@ defmodule Logistiki.Accounting.Pipeline do
 
   # ledger_stage — private helper.
   defp ledger_stage(nil, [], _opts) do
-    {:ok, nil, %{action: :ledger_backend_execution_skipped, resource_type: :journal, resource_id: nil, explanation: %{}}}
+    {:ok, nil,
+     %{
+       action: :ledger_backend_execution_skipped,
+       resource_type: :journal,
+       resource_id: nil,
+       explanation: %{}
+     }}
   end
 
   # ledger_stage — private helper.
@@ -293,9 +327,10 @@ defmodule Logistiki.Accounting.Pipeline do
 
     case backend.execute_journal(journal_with_postings, opts) do
       {:ok, ledger_result} ->
-        Telemetry.emit([:logistiki, :ledger, :execute, :stop], %{},
-          %{backend: backend, journal_id: ledger_result.journal_id}
-        )
+        Telemetry.emit([:logistiki, :ledger, :execute, :stop], %{}, %{
+          backend: backend,
+          journal_id: ledger_result.journal_id
+        })
 
         {:ok, ledger_result,
          %{
@@ -306,7 +341,11 @@ defmodule Logistiki.Accounting.Pipeline do
          }}
 
       {:error, %Error{} = error} ->
-        Telemetry.emit([:logistiki, :ledger, :execute, :stop], %{}, %{backend: backend, result: :error})
+        Telemetry.emit([:logistiki, :ledger, :execute, :stop], %{}, %{
+          backend: backend,
+          result: :error
+        })
+
         {:error, error}
     end
   end
@@ -335,7 +374,12 @@ defmodule Logistiki.Accounting.Pipeline do
     Telemetry.emit([:logistiki, :audit, :write, :stop], %{}, %{event_id: normalized.id})
 
     {:ok, normalized.id,
-     %{action: :audit_event_written, resource_type: :audit, resource_id: normalized.id, explanation: %{}}}
+     %{
+       action: :audit_event_written,
+       resource_type: :audit,
+       resource_id: normalized.id,
+       explanation: %{}
+     }}
   end
 
   # projection_updates — private helper.

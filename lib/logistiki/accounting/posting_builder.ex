@@ -102,20 +102,27 @@ defmodule Logistiki.Accounting.PostingBuilder do
 
   # Validates that the amount is present and positive.
   defp require_amount(nil) do
-    {:error, %Error{code: :invalid_template, message: "event amount is missing", stage: :posting_builder}}
+    {:error,
+     %Error{code: :invalid_template, message: "event amount is missing", stage: :posting_builder}}
   end
 
   defp require_amount(%Decimal{} = a) do
     if Decimal.positive?(a) do
       :ok
     else
-      {:error, %Error{code: :invalid_template, message: "event amount must be positive", stage: :posting_builder}}
+      {:error,
+       %Error{
+         code: :invalid_template,
+         message: "event amount must be positive",
+         stage: :posting_builder
+       }}
     end
   end
 
   # Validates that the currency is present.
   defp require_currency(nil) do
-    {:error, %Error{code: :invalid_template, message: "event currency is missing", stage: :posting_builder}}
+    {:error,
+     %Error{code: :invalid_template, message: "event currency is missing", stage: :posting_builder}}
   end
 
   defp require_currency(_), do: :ok

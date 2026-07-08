@@ -21,7 +21,16 @@ defmodule Logistiki.Projections.ProjectionEngine do
   import Ecto.Query
 
   alias Logistiki.Accounting.{Journal, Posting}
-  alias Logistiki.Projections.{Balance, BalanceSheet, GeneralLedger, IncomeStatement, StatementLine, TrialBalance}
+
+  alias Logistiki.Projections.{
+    Balance,
+    BalanceSheet,
+    GeneralLedger,
+    IncomeStatement,
+    StatementLine,
+    TrialBalance
+  }
+
   alias Logistiki.Relationships
   alias Logistiki.Repo
   alias Logistiki.VirtualAccounts
@@ -80,7 +89,8 @@ defmodule Logistiki.Projections.ProjectionEngine do
   defp balances_for_account_ids(account_ids, currency, owner_id) do
     rows =
       from(p in Posting,
-        join: j in Journal, on: j.id == p.journal_id,
+        join: j in Journal,
+        on: j.id == p.journal_id,
         where: j.status in ["posted", "reversed"] and p.virtual_account_id in ^account_ids,
         group_by: [p.account_code, p.currency, p.debit_credit],
         select: %{
@@ -98,6 +108,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
     |> Enum.group_by(fn r -> {r.account_code, r.currency} end)
     |> Enum.map(fn {{account_code, cur}, group} ->
       {debits, credits, count} = debit_credit_totals_with_count(group)
+
       Balance.build(account_code, cur, debits, credits, count)
       |> Map.put(:account_id, owner_id)
     end)
@@ -143,7 +154,8 @@ defmodule Logistiki.Projections.ProjectionEngine do
 
     rows =
       from(p in Posting,
-        join: j in Journal, on: j.id == p.journal_id,
+        join: j in Journal,
+        on: j.id == p.journal_id,
         where: j.status in ["posted", "reversed"] and p.virtual_account_id in ^account_ids,
         order_by: [asc: j.effective_date, asc: j.inserted_at, asc: p.sequence],
         select: %{
@@ -217,8 +229,10 @@ defmodule Logistiki.Projections.ProjectionEngine do
 
     rows =
       from(p in Posting,
-        join: j in Journal, on: j.id == p.journal_id,
-        left_join: a in VirtualAccount, on: a.id == p.virtual_account_id,
+        join: j in Journal,
+        on: j.id == p.journal_id,
+        left_join: a in VirtualAccount,
+        on: a.id == p.virtual_account_id,
         where: j.status in ["posted", "reversed"],
         group_by: [p.account_code, a.name, p.currency, p.debit_credit],
         order_by: [asc: p.currency, asc: p.account_code],
@@ -255,8 +269,13 @@ defmodule Logistiki.Projections.ProjectionEngine do
     balanced? =
       Enum.all?(currencies, fn cur ->
         cur_lines = Enum.filter(lines, &(&1.currency == cur))
-        debits = cur_lines |> Enum.map(& &1.debit_total) |> Enum.reduce(Decimal.new(0), &Decimal.add/2)
-        credits = cur_lines |> Enum.map(& &1.credit_total) |> Enum.reduce(Decimal.new(0), &Decimal.add/2)
+
+        debits =
+          cur_lines |> Enum.map(& &1.debit_total) |> Enum.reduce(Decimal.new(0), &Decimal.add/2)
+
+        credits =
+          cur_lines |> Enum.map(& &1.credit_total) |> Enum.reduce(Decimal.new(0), &Decimal.add/2)
+
         Decimal.equal?(debits, credits)
       end)
 
@@ -274,7 +293,8 @@ defmodule Logistiki.Projections.ProjectionEngine do
 
     rows =
       from(p in Posting,
-        join: j in Journal, on: j.id == p.journal_id,
+        join: j in Journal,
+        on: j.id == p.journal_id,
         where: j.status in ["posted", "reversed"],
         order_by: [asc: j.effective_date, asc: j.inserted_at, asc: p.sequence],
         select: %{
@@ -344,7 +364,8 @@ defmodule Logistiki.Projections.ProjectionEngine do
   @doc "Builds a balance sheet (assets, liabilities, equity)."
   @doc since: "0.1.0"
   def balance_sheet(opts \\ []) do
-    sections = section_balances(~w(asset settlement liability client suspense clearing tax equity)a, opts)
+    sections =
+      section_balances(~w(asset settlement liability client suspense clearing tax equity)a, opts)
 
     %BalanceSheet{
       assets: section(sections[:assets]),
@@ -363,13 +384,21 @@ defmodule Logistiki.Projections.ProjectionEngine do
     expenses = section(sections[:expenses])
 
     net_profit_by_currency =
-      Enum.reduce(Map.keys(income.totals_by_currency) ++ Map.keys(expenses.totals_by_currency), %{}, fn cur, acc ->
-        inc = Map.get(income.totals_by_currency, cur, Decimal.new(0))
-        exp = Map.get(expenses.totals_by_currency, cur, Decimal.new(0))
-        Map.put(acc, cur, Decimal.sub(inc, exp))
-      end)
+      Enum.reduce(
+        Map.keys(income.totals_by_currency) ++ Map.keys(expenses.totals_by_currency),
+        %{},
+        fn cur, acc ->
+          inc = Map.get(income.totals_by_currency, cur, Decimal.new(0))
+          exp = Map.get(expenses.totals_by_currency, cur, Decimal.new(0))
+          Map.put(acc, cur, Decimal.sub(inc, exp))
+        end
+      )
 
-    %IncomeStatement{income: income, expenses: expenses, net_profit_by_currency: net_profit_by_currency}
+    %IncomeStatement{
+      income: income,
+      expenses: expenses,
+      net_profit_by_currency: net_profit_by_currency
+    }
   end
 
   # section_balances — private helper.
@@ -379,8 +408,10 @@ defmodule Logistiki.Projections.ProjectionEngine do
 
     rows =
       from(p in Posting,
-        join: j in Journal, on: j.id == p.journal_id,
-        join: a in VirtualAccount, on: a.id == p.virtual_account_id,
+        join: j in Journal,
+        on: j.id == p.journal_id,
+        join: a in VirtualAccount,
+        on: a.id == p.virtual_account_id,
         where: j.status in ["posted", "reversed"] and a.account_type in ^type_strings,
         group_by: [a.id, a.code, a.account_type, p.currency, p.debit_credit],
         select: %{
@@ -446,7 +477,16 @@ defmodule Logistiki.Projections.ProjectionEngine do
     Enum.reduce(sections, %{}, fn {section_key, balances}, acc ->
       Enum.reduce(balances, acc, fn b, a ->
         cur_map = Map.get(a, b.currency, %{})
-        Map.put(a, b.currency, Map.put(cur_map, section_key, Decimal.add(Map.get(cur_map, section_key, Decimal.new(0)), b.net)))
+
+        Map.put(
+          a,
+          b.currency,
+          Map.put(
+            cur_map,
+            section_key,
+            Decimal.add(Map.get(cur_map, section_key, Decimal.new(0)), b.net)
+          )
+        )
       end)
     end)
   end

@@ -52,22 +52,22 @@ defmodule Logistiki.BusinessEntities.BusinessEntity do
 
   schema "business_entities" do
     # Display name of the entity (required). Example: `\"Acme Holdings\"`
-    field :name, :string
+    field(:name, :string)
     # Legal name of the entity. Example: `\"Acme Holdings LLC\"`
-    field :legal_name, :string
+    field(:legal_name, :string)
     # Entity type, one of `types/0`. Default: `\"company\"`. Example: `\"trust\"`
-    field :entity_type, :string, default: "company"
+    field(:entity_type, :string, default: "company")
     # Entity status, one of `statuses/0`. Default: `\"pending\"`. Example: `\"active\"`
-    field :status, :string, default: "pending"
+    field(:status, :string, default: "pending")
     # Jurisdiction code. Example: `\"US\"`, `\"EU\"`, `\"GB\"`
-    field :jurisdiction, :string
+    field(:jurisdiction, :string)
     # Unique external reference. Example: `\"crm_12345\"`
-    field :external_id, :string
+    field(:external_id, :string)
     # Extensible key/value metadata. Default: `%{}`. Example: `%{\"risk_score\" => \"low\"}`
-    field :metadata, :map, default: %{}
+    field(:metadata, :map, default: %{})
 
-    belongs_to :parent, __MODULE__, foreign_key: :parent_id
-    has_many :children, __MODULE__, foreign_key: :parent_id
+    belongs_to(:parent, __MODULE__, foreign_key: :parent_id)
+    has_many(:children, __MODULE__, foreign_key: :parent_id)
 
     timestamps(type: :utc_datetime)
   end
@@ -150,7 +150,16 @@ defmodule Logistiki.BusinessEntities.BusinessEntity do
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(entity, attrs) do
     entity
-    |> cast(attrs, [:name, :legal_name, :entity_type, :status, :jurisdiction, :external_id, :parent_id, :metadata])
+    |> cast(attrs, [
+      :name,
+      :legal_name,
+      :entity_type,
+      :status,
+      :jurisdiction,
+      :external_id,
+      :parent_id,
+      :metadata
+    ])
     |> validate_required([:name, :entity_type, :status])
     |> validate_inclusion(:status, Enum.map(@statuses, &Atom.to_string/1))
     |> validate_inclusion(:entity_type, Enum.map(@types, &Atom.to_string/1))

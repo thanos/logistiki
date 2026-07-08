@@ -5,7 +5,9 @@ defmodule Logistiki.BusinessEntitiesTest do
 
   describe "create_entity/1" do
     test "creates a root entity" do
-      assert {:ok, entity} = BusinessEntities.create_entity(%{name: "Acme Holdings", entity_type: "company"})
+      assert {:ok, entity} =
+               BusinessEntities.create_entity(%{name: "Acme Holdings", entity_type: "company"})
+
       assert entity.parent_id == nil
       assert entity.status == "pending"
 
@@ -14,7 +16,8 @@ defmodule Logistiki.BusinessEntitiesTest do
     end
 
     test "creates a child entity and links the closure" do
-      assert {:ok, parent} = BusinessEntities.create_entity(%{name: "Acme Holdings", entity_type: "company"})
+      assert {:ok, parent} =
+               BusinessEntities.create_entity(%{name: "Acme Holdings", entity_type: "company"})
 
       assert {:ok, child} =
                BusinessEntities.create_entity(%{
@@ -50,8 +53,13 @@ defmodule Logistiki.BusinessEntitiesTest do
   describe "move_entity/2" do
     test "moves a subtree under a new parent" do
       {:ok, a} = BusinessEntities.create_entity(%{name: "A", entity_type: "company"})
-      {:ok, b} = BusinessEntities.create_entity(%{name: "B", entity_type: "company", parent_id: a.id})
-      {:ok, c} = BusinessEntities.create_entity(%{name: "C", entity_type: "company", parent_id: b.id})
+
+      {:ok, b} =
+        BusinessEntities.create_entity(%{name: "B", entity_type: "company", parent_id: a.id})
+
+      {:ok, c} =
+        BusinessEntities.create_entity(%{name: "C", entity_type: "company", parent_id: b.id})
+
       {:ok, d} = BusinessEntities.create_entity(%{name: "D", entity_type: "company"})
 
       assert {:ok, moved} = BusinessEntities.move_entity(c, d)
