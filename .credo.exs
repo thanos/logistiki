@@ -12,7 +12,7 @@
         {Credo.Check.Readability.ModuleNames, false},
         {Credo.Check.Readability.Specs, false},
         {Credo.Check.Readability.SinglePipe, false},
-        {Credo.Check.Refactor.Nesting, max_depth: 4},
+        {Credo.Check.Refactor.Nesting, max_depth: 2},
         {Credo.Check.Refactor.RedundantWithClause, false},
         {Credo.Check.Refactor.LongQuoteBlocks, false},
         {Credo.Check.Refactor.FunctionArity, false},

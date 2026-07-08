@@ -91,17 +91,27 @@ defmodule Logistiki.Projections.ProjectionEngine do
     rows
     |> Enum.group_by(fn r -> {r.account_code, r.currency} end)
     |> Enum.map(fn {{account_code, cur}, group} ->
-      {debits, credits, count} =
-        Enum.reduce(group, {Decimal.new(0), Decimal.new(0), 0}, fn r, {d, c, n} ->
-          if r.debit_credit == "debit",
-            do: {Decimal.add(d, r.total || Decimal.new(0)), c, n + r.count},
-            else: {d, Decimal.add(c, r.total || Decimal.new(0)), n + r.count}
-        end)
-
+      {debits, credits, count} = debit_credit_totals_with_count(group)
       Balance.build(account_code, cur, debits, credits, count)
       |> Map.put(:account_id, owner_id)
     end)
     |> Enum.sort_by(fn b -> {b.currency, b.account_code} end)
+  end
+
+  defp debit_credit_totals_with_count(group) do
+    Enum.reduce(group, {Decimal.new(0), Decimal.new(0), 0}, fn r, {d, c, n} ->
+      if r.debit_credit == "debit",
+        do: {Decimal.add(d, r.total || Decimal.new(0)), c, n + r.count},
+        else: {d, Decimal.add(c, r.total || Decimal.new(0)), n + r.count}
+    end)
+  end
+
+  defp debit_credit_totals(group) do
+    Enum.reduce(group, {Decimal.new(0), Decimal.new(0)}, fn r, {d, c} ->
+      if r.debit_credit == "debit",
+        do: {Decimal.add(d, r.total || Decimal.new(0)), c},
+        else: {d, Decimal.add(c, r.total || Decimal.new(0))}
+    end)
   end
 
   # ------------------------------------------------------------------
@@ -214,12 +224,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
       rows
       |> Enum.group_by(fn r -> {r.account_code, r.account_name, r.currency} end)
       |> Enum.map(fn {{account_code, account_name, cur}, group} ->
-        {debits, credits} =
-          Enum.reduce(group, {Decimal.new(0), Decimal.new(0)}, fn r, {d, c} ->
-            if r.debit_credit == "debit",
-              do: {Decimal.add(d, r.total || Decimal.new(0)), c},
-              else: {d, Decimal.add(c, r.total || Decimal.new(0))}
-          end)
+        {debits, credits} = debit_credit_totals(group)
 
         %{
           account_code: account_code,

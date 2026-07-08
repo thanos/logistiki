@@ -148,20 +148,22 @@ defmodule Logistiki.VirtualAccounts do
     if creates_cycle?(account.id, new_parent_id) do
       {:error, :cycle_detected}
     else
-      Repo.transaction(fn ->
-        delete_old_closure_on_move(account.id)
+      Repo.transaction(fn -> perform_move(account, new_parent_id) end)
+    end
+  end
 
-        with {:ok, updated} <-
-               account
-               |> VirtualAccount.changeset(%{parent_id: new_parent_id})
-               |> Ecto.Changeset.change()
-               |> Repo.update(),
-             {:ok, _} <- link_subtree_under_new_parent(updated) do
-          updated
-        else
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
+  defp perform_move(account, new_parent_id) do
+    delete_old_closure_on_move(account.id)
+
+    with {:ok, updated} <-
+           account
+           |> VirtualAccount.changeset(%{parent_id: new_parent_id})
+           |> Ecto.Changeset.change()
+           |> Repo.update(),
+         {:ok, _} <- link_subtree_under_new_parent(updated) do
+      updated
+    else
+      {:error, reason} -> Repo.rollback(reason)
     end
   end
 

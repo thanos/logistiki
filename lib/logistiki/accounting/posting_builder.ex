@@ -32,11 +32,15 @@ defmodule Logistiki.Accounting.PostingBuilder do
       template_postings
       |> Enum.sort_by(& &1.sequence)
       |> Enum.reduce_while({:ok, []}, fn spec, {:ok, acc} ->
-        case build_posting(spec, account_roles, amount, currency) do
-          {:ok, posting} -> {:cont, {:ok, acc ++ [posting]}}
-          {:error, reason} -> {:halt, {:error, reason}}
-        end
+        append_posting(spec, acc, account_roles, amount, currency)
       end)
+    end
+  end
+
+  defp append_posting(spec, acc, account_roles, amount, currency) do
+    case build_posting(spec, account_roles, amount, currency) do
+      {:ok, posting} -> {:cont, {:ok, acc ++ [posting]}}
+      {:error, reason} -> {:halt, {:error, reason}}
     end
   end
 

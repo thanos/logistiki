@@ -45,11 +45,15 @@ defmodule Logistiki.Accounting.InvariantValidator do
 
     with {:ok, accounts_by_code} <- fetch_accounts(codes) do
       Enum.reduce_while(postings, :ok, fn posting, :ok ->
-        case validate_account(posting, accounts_by_code) do
-          :ok -> {:cont, :ok}
-          {:error, _} = err -> {:halt, err}
-        end
+        validate_single_account(posting, accounts_by_code)
       end)
+    end
+  end
+
+  defp validate_single_account(posting, accounts_by_code) do
+    case validate_account(posting, accounts_by_code) do
+      :ok -> {:cont, :ok}
+      {:error, _} = err -> {:halt, err}
     end
   end
 
