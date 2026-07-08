@@ -1,11 +1,12 @@
 # Logistiki
 
-
 [![Hex.pm Version](https://img.shields.io/hexpm/v/logistiki.svg)](https://hex.pm/packages/logistiki)
+[![Hex.pm Downloads](https://img.shields.io/hexpm/dt/logistiki.svg)](https://hex.pm/packages/logistiki)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/logistiki)
 [![Hex.pm License](https://img.shields.io/hexpm/l/logistiki.svg)](https://hex.pm/packages/logistiki)
 [![CI](https://github.com/thanos/logistiki/actions/workflows/ci.yml/badge.svg)](https://github.com/thanos/logistiki/actions/workflows/ci.yml)
-[![Coverage](https://coveralls.io/repos/github/thanos/logistiki/badge.svg?branch=main)](https://coveralls.io/github/thanos/logistiki)
+[![Coverage Status](https://coveralls.io/repos/github/thanos/logistiki/badge.svg?branch=main)](https://coveralls.io/github/thanos/logistiki)
+[![GitHub Release](https://img.shields.io/github/release/thanos/logistiki.svg)](https://github.com/thanos/logistiki/releases)
 
 > An embedded OTP accounting engine for Elixir applications.
 
@@ -163,8 +164,7 @@ event = %DepositReceived{
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `logistiki` to your list of dependencies in `mix.exs`:
+Add `logistiki` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
@@ -174,7 +174,22 @@ def deps do
 end
 ```
 
-Requires PostgreSQL and Elixir 1.18+.
+Requires Elixir 1.18+ and PostgreSQL.
+
+### Optional: SQLite for tests and Livebooks
+
+Add `ecto_sqlite3` to use SQLite in-memory instead of PostgreSQL:
+
+```elixir
+def deps do
+  [
+    {:logistiki, "~> 0.1.0"},
+    {:ecto_sqlite3, "~> 0.18"}
+  ]
+end
+```
+
+Set `LOGISTIKI_DB_ADAPTER=sqlite` before compilation.
 
 ## Architecture overview
 
@@ -234,6 +249,22 @@ See the `docs/` directory for in-depth guides:
 - [Audit evidence](docs/audit_evidence.md)
 - [Testing strategy](docs/testing_strategy.md)
 - [Demo script](docs/demo_script.md)
+
+Full API documentation is available at
+[HexDocs](https://hexdocs.pm/logistiki).
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b my-new-feature`)
+3. Run `mix test` to make sure everything passes
+4. Commit your changes (`git commit -am 'Add some feature'`)
+5. Push to the branch (`git push origin my-new-feature`)
+6. Create a new Pull Request
 
 ## License
 

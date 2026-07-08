@@ -29,6 +29,8 @@ jobs:
 
     env:
       HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+      MIX_ENV: test
+      LOGISTIKI_DATABASE_URL: ecto://postgres:postgres@localhost:5432/logistiki_test
 
     steps:
       - name: Checkout
@@ -49,18 +51,38 @@ jobs:
       - name: Compile app
         run: mix compile --warnings-as-errors --no-deps
 
+      - name: Create and migrate test database
+        run: |
+          mix ecto.create
+          mix ecto.migrate
+
       - name: Run tests
         run: mix test
-        env:
-          MIX_ENV: test
-          LOGISTIKI_DATABASE_URL: ecto://postgres:postgres@localhost:5432/logistiki_test
 
       - name: Publish to Hex.pm
         run: mix hex.publish --yes
 
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Read changelog for this version
+        id: changelog
+        run: |
+          # Extract the section for this version from CHANGELOG.md
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          # Build the pattern: ## [0..1.0] or ## [0.1.0]
+          SECTION=$(awk "/^## \[${VERSION}\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+          # Write to a file for the release body
+          echo "$SECTION" > release_body.md
+          echo "Extracted changelog for v${VERSION}"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: v${{ steps.version.outputs.VERSION }}
+          body_path: release_body.md
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
