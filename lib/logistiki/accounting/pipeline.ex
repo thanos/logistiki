@@ -55,6 +55,7 @@ defmodule Logistiki.Accounting.Pipeline do
 
   Returns `{:ok, %Logistiki.Accounting.Result{}}` or `{:error, %Logistiki.Error{}}`.
   """
+  @doc since: "0.1.0"
   def run(event, opts \\ []) do
     start_mono = Telemetry.start([:logistiki, :event, :process], %{event_type: event_type(event)})
 
@@ -125,6 +126,7 @@ defmodule Logistiki.Accounting.Pipeline do
   # Stages
   # ------------------------------------------------------------------
 
+  # normalize_stage — private helper.
   defp normalize_stage(event) do
     case Event.normalize(event) do
       {:ok, normalized} ->
@@ -143,6 +145,7 @@ defmodule Logistiki.Accounting.Pipeline do
     end
   end
 
+  # persist_stage — private helper.
   defp persist_stage(normalized, event) do
     case Events.persist(event) do
       {:ok, persisted} ->
@@ -166,6 +169,7 @@ defmodule Logistiki.Accounting.Pipeline do
     end
   end
 
+  # knowledge_stage — private helper.
   defp knowledge_stage(normalized) do
     Telemetry.emit([:logistiki, :knowledge, :evaluate, :start], %{}, %{event_type: normalized.type})
 
@@ -188,6 +192,7 @@ defmodule Logistiki.Accounting.Pipeline do
     end
   end
 
+  # business_rules_stage — private helper.
   defp business_rules_stage(result, normalized) do
     cond do
       result.blocked ->
@@ -219,11 +224,13 @@ defmodule Logistiki.Accounting.Pipeline do
     end
   end
 
+  # journal_stage — private helper.
   defp journal_stage(%{policy: nil} = result, normalized) do
     {:ok, nil, [], JournalBuilder.build(result, normalized) |> elem(2),
      %{action: :policy_selected, resource_type: :policy, resource_id: nil, explanation: %{policy: nil}}}
   end
 
+  # journal_stage — private helper.
   defp journal_stage(result, normalized) do
     Telemetry.emit([:logistiki, :policy, :select, :stop], %{}, %{policy: result.policy})
     Telemetry.emit([:logistiki, :template, :select, :stop], %{}, %{template: result.template})
@@ -247,10 +254,12 @@ defmodule Logistiki.Accounting.Pipeline do
     end
   end
 
+  # invariant_stage — private helper.
   defp invariant_stage(nil, []) do
     {:ok, %{action: :invariant_validation_succeeded, resource_type: :journal, resource_id: nil, explanation: %{journal: nil}}}
   end
 
+  # invariant_stage — private helper.
   defp invariant_stage(journal, postings) do
     case InvariantValidator.validate(journal, postings) do
       :ok ->
@@ -270,10 +279,12 @@ defmodule Logistiki.Accounting.Pipeline do
     end
   end
 
+  # ledger_stage — private helper.
   defp ledger_stage(nil, [], _opts) do
     {:ok, nil, %{action: :ledger_backend_execution_skipped, resource_type: :journal, resource_id: nil, explanation: %{}}}
   end
 
+  # ledger_stage — private helper.
   defp ledger_stage(journal, postings, opts) do
     backend = Ledger.backend()
     journal_with_postings = %{journal | postings: postings}
@@ -300,6 +311,7 @@ defmodule Logistiki.Accounting.Pipeline do
     end
   end
 
+  # audit_stage — private helper.
   defp audit_stage(normalized, journal, ledger_result, stages) do
     journal_id = (ledger_result && ledger_result.journal_id) || (journal && journal.id)
 
@@ -326,16 +338,21 @@ defmodule Logistiki.Accounting.Pipeline do
      %{action: :audit_event_written, resource_type: :audit, resource_id: normalized.id, explanation: %{}}}
   end
 
+  # projection_updates — private helper.
   defp projection_updates(ledger_result) do
     if ledger_result, do: ledger_result.balances, else: %{}
   end
 
+  # warnings_for — private helper.
   defp warnings_for(%{requires_approval: false, blocked: false}), do: []
 
+  # warnings_for — private helper.
   defp warnings_for(_), do: []
 
+  # event_type — private helper.
   defp event_type(%{type: _}), do: nil
 
+  # event_type — private helper.
   defp event_type(event) do
     {:ok, normalized} = Event.normalize(event)
     normalized.type
@@ -343,12 +360,15 @@ defmodule Logistiki.Accounting.Pipeline do
     _ -> nil
   end
 
+  # maybe_update_event_status — private helper.
   defp maybe_update_event_status(nil, _result), do: :ok
 
+  # maybe_update_event_status — private helper.
   defp maybe_update_event_status(persisted, %Result{journal: nil}) do
     Events.update_status(persisted, :no_accounting_impact)
   end
 
+  # maybe_update_event_status — private helper.
   defp maybe_update_event_status(persisted, %Result{}) do
     Events.update_status(persisted, :processed)
   end

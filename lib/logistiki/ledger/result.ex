@@ -6,6 +6,9 @@ defmodule Logistiki.Ledger.Result do
   leaking backend-specific types.
   """
 
+  @typedoc """
+  The struct type. See the module documentation for field details and examples.
+  """
   @type t :: %__MODULE__{
           backend: module(),
           journal_id: term() | nil,

@@ -22,6 +22,7 @@ defmodule Logistiki.Demo.Seeds do
   alias Logistiki.VirtualAccounts
 
   @doc "Creates the demo business entity tree and returns a map of named entities."
+  @doc since: "0.1.0"
   def seed_entities do
     {:ok, acme_holdings} =
       BusinessEntities.create_entity(%{name: "Acme Holdings", entity_type: "company", status: "active"})
@@ -63,6 +64,7 @@ defmodule Logistiki.Demo.Seeds do
   end
 
   @doc "Creates the demo virtual account tree and returns a map of named accounts."
+  @doc since: "0.1.0"
   def seed_accounts do
     tree = [
       {"ASSETS", "asset", "debit", nil, [
@@ -102,6 +104,7 @@ defmodule Logistiki.Demo.Seeds do
     build_tree(nil, tree)
   end
 
+  # build_tree — private helper.
   defp build_tree(parent_id, tree) do
     Enum.reduce(tree, %{}, fn {code, type, normal, currency, children}, acc ->
       attrs = %{
@@ -121,6 +124,7 @@ defmodule Logistiki.Demo.Seeds do
   end
 
   @doc "Links demo entities to their accounts and returns :ok."
+  @doc since: "0.1.0"
   def seed_relationships(entities, accounts) do
     Relationships.link_entity_account(
       entities.acme_holdings,
@@ -150,6 +154,7 @@ defmodule Logistiki.Demo.Seeds do
   end
 
   @doc "Runs the full demo seed (entities, accounts, relationships). Returns `{entities, accounts}`."
+  @doc since: "0.1.0"
   def run do
     entities = seed_entities()
     accounts = seed_accounts()
@@ -158,6 +163,7 @@ defmodule Logistiki.Demo.Seeds do
   end
 
   @doc "Returns the demo deposit event for `account_code`."
+  @doc since: "0.1.0"
   def deposit_event(account_code, amount, entity_type \\ "corporate") do
     %DepositReceived{
       id: "demo_deposit_#{:rand.uniform(1_000_000)}",
@@ -174,6 +180,7 @@ defmodule Logistiki.Demo.Seeds do
   end
 
   @doc "Returns the demo transfer event from `from_code` to `to_code`."
+  @doc since: "0.1.0"
   def transfer_event(from_code, to_code, amount) do
     %TransferSettled{
       id: "demo_transfer_#{:rand.uniform(1_000_000)}",
@@ -190,6 +197,7 @@ defmodule Logistiki.Demo.Seeds do
   end
 
   @doc "Returns the demo fee event."
+  @doc since: "0.1.0"
   def fee_event(account_code, amount) do
     %FeeAssessed{
       id: "demo_fee_#{:rand.uniform(1_000_000)}",
@@ -207,6 +215,7 @@ defmodule Logistiki.Demo.Seeds do
   end
 
   @doc "Returns a no-accounting-impact account-opened event."
+  @doc since: "0.1.0"
   def account_opened_event(account_code) do
     %AccountOpened{
       id: "demo_open_#{:rand.uniform(1_000_000)}",

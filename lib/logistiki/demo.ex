@@ -17,7 +17,31 @@ defmodule Logistiki.Demo do
 
   alias Logistiki.Demo.Seeds
 
-  @doc "Runs the full demo scenario and returns a summary map. Prints progress to `:stdio`."
+  @doc """
+  Runs the full demo scenario and returns a summary map.
+
+  Seeds the demo entity and account trees, links entities to accounts,
+  processes demo business events, and prints the selected policies, generated
+  journals, postings, balances, statements, and audit evidence.
+
+  ## Arguments
+
+    * `opts` — `keyword()` — passed through to `Logistiki.process/2`.
+
+  ## Returns
+
+    * `map()` — with `:entities`, `:accounts`, `:deposit_result`,
+      `:fee_result`, and `:reversal` keys.
+
+  ## Examples
+
+      iex> Logistiki.Demo.run_demo()
+      === Logistiki v0.1.0 demo ===
+      ...
+      === demo complete ===
+      %{entities: ..., accounts: ..., deposit_result: ...}
+  """
+  @doc since: "0.1.0"
   def run_demo(opts \\ []) do
     IO.puts("=== Logistiki v0.1.0 demo ===")
     IO.puts("Ledger backend: #{inspect(Logistiki.ledger_backend())}")
@@ -86,10 +110,12 @@ defmodule Logistiki.Demo do
     }
   end
 
+  # print_result — private helper.
   defp print_result(label, %{policy: policy, journal: journal}) do
     IO.puts("   #{label}: policy=#{inspect(policy)} journal=#{inspect(journal && journal.id)} status=#{inspect(journal && journal.status)}")
   end
 
+  # fmt — private helper.
   defp fmt(nil), do: "-"
   defp fmt(%Decimal{} = d), do: Decimal.to_string(d)
 end

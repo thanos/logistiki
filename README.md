@@ -125,6 +125,9 @@ mix ecto.setup
 
 # Run the demo scenario end-to-end:
 mix run -e 'Logistiki.Demo.run_demo()'
+
+# Or open the interactive Livebook walkthrough (SQLite in-memory, no PostgreSQL needed):
+livebook open docs/livebooks/logistiki_demo.livemd
 ```
 
 ```elixir

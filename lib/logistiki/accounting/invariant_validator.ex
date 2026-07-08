@@ -29,7 +29,37 @@ defmodule Logistiki.Accounting.InvariantValidator do
   alias Logistiki.Repo
   alias Logistiki.VirtualAccounts
 
-  @doc "Validates a list of posting changesets (or maps) for the invariants that don't require the DB."
+  @doc """
+  Validates a list of posting changesets (or maps) for the invariants that
+  don't require the DB.
+
+  Checks: at least two postings, positive amounts, currencies present, valid
+  directions, and debits equal credits per currency.
+
+  ## Arguments
+
+    * `postings` — `[Posting.t()]` or `[Ecto.Changeset.t()]` — the postings to
+      validate.
+
+  ## Returns
+
+    * `:ok` — all invariants hold.
+    * `{:error, %Error{code: :unbalanced_journal}}` — an invariant was violated.
+
+  ## Examples
+
+      iex> Logistiki.Accounting.InvariantValidator.validate_postings([
+      ...>   %Posting{account_code: "A", debit_credit: "debit", amount: Decimal.new("100"), currency: "USD", sequence: 1},
+      ...>   %Posting{account_code: "B", debit_credit: "credit", amount: Decimal.new("100"), currency: "USD", sequence: 2}
+      ...> ])
+      :ok
+
+      iex> {:error, %{code: :unbalanced_journal}} = Logistiki.Accounting.InvariantValidator.validate_postings([
+      ...>   %Posting{account_code: "A", debit_credit: "debit", amount: Decimal.new("100"), currency: "USD", sequence: 1}
+      ...> ])
+  """
+  @doc since: "0.1.0"
+  @spec validate_postings([Posting.t() | Ecto.Changeset.t() | map()]) :: :ok | {:error, Error.t()}
   def validate_postings(postings) do
     with :ok <- require_min_two_postings(postings),
          :ok <- require_positive_amounts(postings),
@@ -39,7 +69,31 @@ defmodule Logistiki.Accounting.InvariantValidator do
     end
   end
 
-  @doc "Validates that each posting targets an existing, leaf, active, posting-allowed account."
+  @doc """
+  Validates that each posting targets an existing, leaf, active, posting-
+  allowed account.
+
+  ## Arguments
+
+    * `postings` — `[Posting.t()]` or `[map()]` — the postings to validate.
+
+  ## Returns
+
+    * `:ok` — all accounts are valid posting targets.
+    * `{:error, %Error{code: :account_not_found}}` — an account code doesn't exist.
+    * `{:error, %Error{code: :account_not_postable}}` — an account is not a leaf
+      posting account.
+
+  ## Examples
+
+      iex> Logistiki.Accounting.InvariantValidator.validate_accounts([
+      ...>   %Posting{account_code: "ASSETS:CASH:USD:NOSTRO", debit_credit: "debit", amount: Decimal.new("100"), currency: "USD", sequence: 1},
+      ...>   %Posting{account_code: "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", debit_credit: "credit", amount: Decimal.new("100"), currency: "USD", sequence: 2}
+      ...> ])
+      :ok
+  """
+  @doc since: "0.1.0"
+  @spec validate_accounts([Posting.t() | map()]) :: :ok | {:error, Error.t()}
   def validate_accounts(postings) do
     codes = Enum.map(postings, &account_code/1) |> Enum.uniq()
 
@@ -50,6 +104,7 @@ defmodule Logistiki.Accounting.InvariantValidator do
     end
   end
 
+  # Validates a single posting's account, returning :cont or :halt for reduce_while.
   defp validate_single_account(posting, accounts_by_code) do
     case validate_account(posting, accounts_by_code) do
       :ok -> {:cont, :ok}
@@ -57,7 +112,29 @@ defmodule Logistiki.Accounting.InvariantValidator do
     end
   end
 
-  @doc "Validates that the idempotency key is unique among posted journals."
+  @doc """
+  Validates that the idempotency key is unique among posted journals.
+
+  ## Arguments
+
+    * `idempotency_key` — `String.t() | nil` — the key to check. `nil` always
+      passes.
+
+  ## Returns
+
+    * `:ok` — no posted journal with this key exists.
+    * `{:error, %Error{code: :duplicate_idempotency_key}}` — a posted journal
+      with this key already exists.
+
+  ## Examples
+
+      iex> Logistiki.Accounting.InvariantValidator.validate_idempotency(nil)
+      :ok
+      iex> Logistiki.Accounting.InvariantValidator.validate_idempotency("evt:1:policy:cash_deposit")
+      :ok
+  """
+  @doc since: "0.1.0"
+  @spec validate_idempotency(String.t() | nil) :: :ok | {:error, Error.t()}
   def validate_idempotency(nil), do: :ok
 
   def validate_idempotency(idempotency_key) do
@@ -78,7 +155,32 @@ defmodule Logistiki.Accounting.InvariantValidator do
     end
   end
 
-  @doc "Validates that `reversal_postings` exactly negate `original_postings`."
+  @doc """
+  Validates that `reversal_postings` exactly negate `original_postings`.
+
+  Checks: same count, same account codes, same amounts, opposite directions,
+  same currencies — pairwise in sequence order.
+
+  ## Arguments
+
+    * `original_postings` — `[Posting.t()]` — the original journal's postings.
+    * `reversal_postings` — `[Posting.t()]` — the reversal's postings.
+
+  ## Returns
+
+    * `:ok` — the reversal exactly negates the original.
+    * `{:error, %Error{code: :unbalanced_journal}}` — the reversal does not
+      match.
+
+  ## Examples
+
+      iex> original = [%Posting{account_code: "A", debit_credit: "debit", amount: Decimal.new("100"), currency: "USD", sequence: 1}]
+      iex> reversal = [%Posting{account_code: "A", debit_credit: "credit", amount: Decimal.new("100"), currency: "USD", sequence: 1}]
+      iex> Logistiki.Accounting.InvariantValidator.validate_reversal(original, reversal)
+      :ok
+  """
+  @doc since: "0.1.0"
+  @spec validate_reversal([Posting.t()], [Posting.t()]) :: :ok | {:error, Error.t()}
   def validate_reversal(original_postings, reversal_postings) when is_list(original_postings) do
     if length(original_postings) == length(reversal_postings) and
          Enum.all?(Enum.zip(original_postings, reversal_postings), fn {orig, rev} ->
@@ -97,7 +199,29 @@ defmodule Logistiki.Accounting.InvariantValidator do
     end
   end
 
-  @doc "Validates a journal's full invariant set (postings + accounts + idempotency)."
+  @doc """
+  Validates a journal's full invariant set (postings + accounts + idempotency).
+
+  Combines `validate_postings/1`, `validate_accounts/1`, and
+  `validate_idempotency/1` in sequence.
+
+  ## Arguments
+
+    * `journal` — `%Journal{}` — the journal (for the idempotency key).
+    * `postings` — `[Posting.t()]` — the journal's postings.
+
+  ## Returns
+
+    * `:ok` — all invariants hold.
+    * `{:error, %Error{}}` — the first invariant that failed.
+
+  ## Examples
+
+      iex> Logistiki.Accounting.InvariantValidator.validate(journal, postings)
+      :ok
+  """
+  @doc since: "0.1.0"
+  @spec validate(Journal.t(), [Posting.t() | map()]) :: :ok | {:error, Error.t()}
   def validate(%Journal{idempotency_key: key}, postings) do
     with :ok <- validate_postings(postings),
          :ok <- validate_accounts(postings) do
@@ -109,6 +233,7 @@ defmodule Logistiki.Accounting.InvariantValidator do
   # Individual invariants
   # ------------------------------------------------------------------
 
+  # Requires at least two postings in the journal.
   defp require_min_two_postings(postings) when length(postings) < 2 do
     {:error,
      Error.new(:unbalanced_journal,
@@ -119,6 +244,7 @@ defmodule Logistiki.Accounting.InvariantValidator do
 
   defp require_min_two_postings(_), do: :ok
 
+  # Requires all posting amounts to be positive (> 0).
   defp require_positive_amounts(postings) do
     Enum.reduce_while(postings, :ok, fn p, :ok ->
       a = amount(p)
@@ -137,6 +263,7 @@ defmodule Logistiki.Accounting.InvariantValidator do
     end)
   end
 
+  # Requires all postings to have a non-empty currency string.
   defp require_currencies(postings) do
     Enum.reduce_while(postings, :ok, fn p, :ok ->
       if is_binary(currency(p)) and currency(p) != "" do
@@ -153,6 +280,7 @@ defmodule Logistiki.Accounting.InvariantValidator do
     end)
   end
 
+  # Requires all postings to have a valid debit_credit direction.
   defp require_valid_directions(postings) do
     Enum.reduce_while(postings, :ok, fn p, :ok ->
       d = direction(p)
@@ -170,6 +298,7 @@ defmodule Logistiki.Accounting.InvariantValidator do
       end
     end)
   end
+  # Requires debits to equal credits within each currency group.
   defp require_balanced_per_currency(postings) do
     postings
     |> Enum.group_by(&currency/1)
@@ -190,6 +319,7 @@ defmodule Logistiki.Accounting.InvariantValidator do
     end)
   end
 
+  # Computes debit and credit totals from a group of postings.
   defp debit_credit_totals(group) do
     Enum.reduce(group, {Decimal.new(0), Decimal.new(0)}, fn p, {debits, credits} ->
       if direction(p) == "debit",
@@ -198,10 +328,13 @@ defmodule Logistiki.Accounting.InvariantValidator do
     end)
   end
 
+  # Fetches all accounts by their codes and returns a code-to-account map.
   defp fetch_accounts(codes) when codes == [] do
     {:ok, %{}}
   end
 
+  # Fetches accounts from the DB and returns a code-to-account map. Reports
+  # missing accounts as an error.
   defp fetch_accounts(codes) do
     accounts = VirtualAccounts.list_accounts()
 
@@ -224,6 +357,7 @@ defmodule Logistiki.Accounting.InvariantValidator do
     end
   end
 
+  # Validates a single posting's account: must exist and be a postable leaf.
   defp validate_account(posting, accounts_by_code) do
     code = account_code(posting)
     account = Map.get(accounts_by_code, code)
@@ -254,6 +388,7 @@ defmodule Logistiki.Accounting.InvariantValidator do
   # Accessors that work for both changesets and structs
   # ------------------------------------------------------------------
 
+  # Accessors that work for both changesets and structs.
   defp account_code(%Ecto.Changeset{} = cs), do: Ecto.Changeset.get_field(cs, :account_code)
   defp account_code(%Posting{} = p), do: p.account_code
   defp account_code(%{account_code: c}), do: c

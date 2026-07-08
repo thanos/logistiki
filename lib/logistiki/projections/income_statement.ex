@@ -9,6 +9,9 @@ defmodule Logistiki.Projections.IncomeStatement do
           totals_by_currency: %{String.t() => Decimal.t()}
         }
 
+  @typedoc """
+  The struct type. See the module documentation for field details and examples.
+  """
   @type t :: %__MODULE__{
           income: section(),
           expenses: section(),

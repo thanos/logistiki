@@ -5,6 +5,9 @@ defmodule Logistiki.Projections.StatementLine do
   Includes a running balance so statements read like a real account ledger.
   """
 
+  @typedoc """
+  The struct type. See the module documentation for field details and examples.
+  """
   @type t :: %__MODULE__{
           journal_id: term() | nil,
           posting_id: term() | nil,

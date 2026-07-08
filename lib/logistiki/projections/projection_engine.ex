@@ -32,6 +32,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
   # ------------------------------------------------------------------
 
   @doc "Computes the balance(s) for `account` (a struct, id, or code). Aggregates descendants for parent accounts."
+  @doc since: "0.1.0"
   def balance(account, opts \\ [])
 
   def balance(%VirtualAccount{} = account, opts), do: balance_for_account(account, opts)
@@ -47,6 +48,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
     end
   end
 
+  # balance_for_account — private helper.
   defp balance_for_account(%VirtualAccount{id: id} = account, opts) do
     currency = Keyword.get(opts, :currency)
     account_ids = VirtualAccounts.descendant_ids(account)
@@ -54,6 +56,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
   end
 
   @doc "Computes balances for accounts linked to `entity`."
+  @doc since: "0.1.0"
   def balance_for_entity(entity, opts \\ []) do
     accounts = Relationships.list_accounts_for_entity(entity, opts)
     account_ids = Enum.map(accounts, & &1.id)
@@ -62,6 +65,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
   end
 
   @doc "Computes balances for accounts linked to `entity` or any of its descendants."
+  @doc since: "0.1.0"
   def balance_for_entity_tree(entity, opts \\ []) do
     accounts = Relationships.list_accounts_for_entity_tree(entity, opts)
     account_ids = Enum.map(accounts, & &1.id)
@@ -69,8 +73,10 @@ defmodule Logistiki.Projections.ProjectionEngine do
     {:ok, balances_for_account_ids(account_ids, currency, nil)}
   end
 
+  # balances_for_account_ids — private helper.
   defp balances_for_account_ids([], _currency, _owner_id), do: []
 
+  # balances_for_account_ids — private helper.
   defp balances_for_account_ids(account_ids, currency, owner_id) do
     rows =
       from(p in Posting,
@@ -98,6 +104,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
     |> Enum.sort_by(fn b -> {b.currency, b.account_code} end)
   end
 
+  # debit_credit_totals_with_count — private helper.
   defp debit_credit_totals_with_count(group) do
     Enum.reduce(group, {Decimal.new(0), Decimal.new(0), 0}, fn r, {d, c, n} ->
       if r.debit_credit == "debit",
@@ -106,6 +113,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
     end)
   end
 
+  # debit_credit_totals — private helper.
   defp debit_credit_totals(group) do
     Enum.reduce(group, {Decimal.new(0), Decimal.new(0)}, fn r, {d, c} ->
       if r.debit_credit == "debit",
@@ -119,6 +127,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
   # ------------------------------------------------------------------
 
   @doc "Builds a running-balance statement for `account` (aggregates descendant postings)."
+  @doc since: "0.1.0"
   def statement(account, opts \\ [])
 
   def statement(%VirtualAccount{} = account, opts), do: statement_for_account(account, opts)
@@ -127,6 +136,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
     with {:ok, account} <- VirtualAccounts.resolve(code), do: statement_for_account(account, opts)
   end
 
+  # statement_for_account — private helper.
   defp statement_for_account(%VirtualAccount{} = account, opts) do
     currency = Keyword.get(opts, :currency)
     account_ids = VirtualAccounts.descendant_ids(account)
@@ -160,6 +170,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
     {:ok, rows}
   end
 
+  # attach_running_balance — private helper.
   defp attach_running_balance(rows) do
     {lines, _running} =
       Enum.map_reduce(rows, %{}, fn row, running ->
@@ -191,6 +202,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
     lines
   end
 
+  # signed_amount — private helper.
   defp signed_amount("debit", amount), do: amount
   defp signed_amount("credit", amount), do: Decimal.negate(amount)
 
@@ -199,6 +211,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
   # ------------------------------------------------------------------
 
   @doc "Builds a trial balance across all posted journals."
+  @doc since: "0.1.0"
   def trial_balance(opts \\ []) do
     currency = Keyword.get(opts, :currency)
 
@@ -255,6 +268,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
   # ------------------------------------------------------------------
 
   @doc "Builds a general ledger view of all posted postings."
+  @doc since: "0.1.0"
   def general_ledger(opts \\ []) do
     currency = Keyword.get(opts, :currency)
 
@@ -328,6 +342,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
   }
 
   @doc "Builds a balance sheet (assets, liabilities, equity)."
+  @doc since: "0.1.0"
   def balance_sheet(opts \\ []) do
     sections = section_balances(~w(asset settlement liability client suspense clearing tax equity)a, opts)
 
@@ -340,6 +355,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
   end
 
   @doc "Builds an income statement (income, expenses, net profit)."
+  @doc since: "0.1.0"
   def income_statement(opts \\ []) do
     sections = section_balances(~w(income fee expense)a, opts)
 
@@ -356,6 +372,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
     %IncomeStatement{income: income, expenses: expenses, net_profit_by_currency: net_profit_by_currency}
   end
 
+  # section_balances — private helper.
   defp section_balances(types, opts) do
     currency = Keyword.get(opts, :currency)
     type_strings = Enum.map(types, &Atom.to_string/1)
@@ -408,8 +425,10 @@ defmodule Logistiki.Projections.ProjectionEngine do
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 
+  # section — private helper.
   defp section(nil), do: %{balances: [], totals_by_currency: %{}}
 
+  # section — private helper.
   defp section(balances) do
     totals_by_currency =
       Enum.reduce(balances, %{}, fn b, acc ->
@@ -422,6 +441,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
     }
   end
 
+  # section_totals — private helper.
   defp section_totals(sections) do
     Enum.reduce(sections, %{}, fn {section_key, balances}, acc ->
       Enum.reduce(balances, acc, fn b, a ->
@@ -431,6 +451,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
     end)
   end
 
+  # maybe_filter_currency — private helper.
   defp maybe_filter_currency(query, nil), do: query
   defp maybe_filter_currency(query, currency), do: where(query, [p], p.currency == ^currency)
 end

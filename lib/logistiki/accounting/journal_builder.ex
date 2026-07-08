@@ -23,11 +23,34 @@ defmodule Logistiki.Accounting.JournalBuilder do
   Builds a draft journal struct (with postings attached) from a knowledge
   result and normalized event.
 
-  Returns `{:ok, %Journal{}, explanation}` or `{:error, %Logistiki.Error{}}`.
-
   When the knowledge result has no policy (e.g. an event with no accounting
   impact), returns `{:ok, nil, [], explanation}`.
+
+  ## Arguments
+
+    * `result` — `%Logistiki.Knowledge.Result{}` — the knowledge layer output.
+    * `event` — `%Logistiki.Event.Normalized{}` — the flattened event.
+
+  ## Returns
+
+    * `{:ok, %Journal{}, [Posting.t()], map()}` — the draft journal, its
+      postings, and the explanation map.
+    * `{:ok, nil, [], map()}` — no accounting impact (policy is nil).
+    * `{:error, %Error{}}` — a posting could not be built (missing role).
+
+  ## Examples
+
+      iex> {:ok, journal, postings, explanation} = Logistiki.Accounting.JournalBuilder.build(knowledge_result, normalized_event)
+      iex> journal.status
+      "draft"
+      iex> journal.selected_policy
+      "cash_deposit"
+      iex> length(postings)
+      2
   """
+  @doc since: "0.1.0"
+  @spec build(KnowledgeResult.t(), Normalized.t()) ::
+          {:ok, Journal.t() | nil, [Posting.t()], map()} | {:error, Error.t()}
   def build(%KnowledgeResult{policy: nil} = result, %Normalized{}) do
     {:ok, nil, [], explanation(result, nil)}
   end
@@ -66,7 +89,36 @@ defmodule Logistiki.Accounting.JournalBuilder do
     end
   end
 
-  @doc "Builds a reversal journal struct that exactly negates `journal`'s postings."
+  @doc """
+  Builds a reversal journal struct that exactly negates `journal`'s postings.
+
+  ## Arguments
+
+    * `journal` — `%Journal{}` — the posted journal to reverse.
+    * `postings` — `[Posting.t()]` — the original journal's postings.
+    * `attrs` — `keyword()` or `map()` of options:
+        * `:description` — `String.t` — defaults to `"Reversal of journal <id>"`
+        * `:effective_date` — `Date.t` — defaults to `Date.utc_today/0`
+        * `:idempotency_key` — `String.t` — defaults to `"reversal:<original_key>"`
+        * `:reason` — `String.t` — the reason for the reversal
+        * `:metadata` — `map()`
+
+  ## Returns
+
+    * `{:ok, %Journal{}, [Posting.t()]}` — the draft reversal journal and its
+      reversal postings.
+
+  ## Examples
+
+      iex> {:ok, reversal, postings} = Logistiki.Accounting.JournalBuilder.build_reversal(journal, original_postings, reason: "mistaken fee")
+      iex> reversal.reversal_of_id
+      1
+      iex> hd(postings).debit_credit
+      "credit"
+  """
+  @doc since: "0.1.0"
+  @spec build_reversal(Journal.t(), [Logistiki.Accounting.Posting.t()], keyword() | map()) ::
+          {:ok, Journal.t(), [Logistiki.Accounting.Posting.t()]}
   def build_reversal(%Journal{} = journal, postings, attrs) do
     reversal_postings = PostingBuilder.build_reversals(postings, nil)
 
@@ -93,11 +145,15 @@ defmodule Logistiki.Accounting.JournalBuilder do
     {:ok, reversal, reversal_postings}
   end
 
+  # Generates an idempotency key from the event id and policy. When the event
+  # has no id, a random suffix is used.
   defp idempotency_key(%Normalized{id: nil}, policy), do: "policy:#{policy}:#{:rand.uniform(1_000_000_000)}"
   defp idempotency_key(%Normalized{id: event_id}, policy), do: "evt:#{event_id}:policy:#{policy}"
 
+  # Builds a human-readable description from the event type and policy.
   defp description(%Normalized{type: type}, policy), do: "#{type} via #{policy}"
 
+  # Builds the explanation map recorded on the journal for audit/replay.
   defp explanation(%KnowledgeResult{} = result, %Normalized{} = event) do
     %{
       event_id: event && event.id,
@@ -111,6 +167,7 @@ defmodule Logistiki.Accounting.JournalBuilder do
     }
   end
 
+  # Builds the explanation for a no-accounting-impact event.
   defp explanation(%KnowledgeResult{} = result, nil) do
     %{
       policy: nil,

@@ -1,0 +1,577 @@
+# Logistiki v0.1.0 — End-to-End Demo
+
+```elixir
+System.put_env("LOGISTIKI_DB_ADAPTER", "sqlite")
+
+Mix.install(
+  [
+    # {:logistiki, path: Path.expand("../..", __DIR__)},
+     {:logistiki,  "~> 0.1.0"},
+    {:ecto_sqlite3, "~> 0.24.1"}
+  ],
+  config: [
+    {:logistiki, [{Logistiki.Repo, [database: ":memory:", pool_size: 1]}]},
+    {:beancount_ex, [{:engine, Beancount.Engine.Elixir}, {Beancount.Repo, [database: ":memory:", pool_size: 1]}]}
+  ]
+)
+```
+
+## Section
+
+```elixir
+# Run migrations against the in-memory SQLite database.
+Ecto.Migrator.run(
+  Logistiki.Repo,
+  Application.app_dir(:logistiki, "priv/repo/migrations"),
+  :up,
+  all: true
+)
+
+"Migrations complete — in-memory SQLite ready."
+```
+
+> **No external dependencies.** This livebook runs entirely in-memory using
+> SQLite. No PostgreSQL installation is required.
+
+## 1. Load the knowledge program
+
+The Datalog knowledge base (`Logistiki.Knowledge.Program`) holds business rules,
+accounting policies, posting templates, and account mappings as facts and rules.
+
+```elixir
+program = Logistiki.Knowledge.load_program()
+```
+
+The program module declares:
+
+* **Relations** for per-event runtime facts (`event_type`, `event_amount_cents`, `event_account`, …)
+* **Rules** that derive `blocked`, `requires_approval`, `policy`, and `account_role`
+* **Static facts** for templates, template postings, required dimensions, and static account mappings
+
+```elixir
+Logistiki.Knowledge.Rules.categories()
+```
+
+## 2. Create the business entity tree
+
+```
+Acme Holdings
+  Acme Trading Ltd
+  Acme Treasury Ltd
+
+Bluewater Trust
+  Bluewater Operating Company
+```
+
+```elixir
+alias Logistiki.BusinessEntities
+
+{:ok, acme_holdings} = BusinessEntities.create_entity(%{name: "Acme Holdings", entity_type: "company", status: "active"})
+{:ok, acme_trading}  = BusinessEntities.create_entity(%{name: "Acme Trading Ltd", entity_type: "company", status: "active", parent_id: acme_holdings.id})
+{:ok, acme_treasury} = BusinessEntities.create_entity(%{name: "Acme Treasury Ltd", entity_type: "company", status: "active", parent_id: acme_holdings.id})
+{:ok, bluewater}     = BusinessEntities.create_entity(%{name: "Bluewater Trust", entity_type: "trust", status: "active"})
+{:ok, bluewater_op}  = BusinessEntities.create_entity(%{name: "Bluewater Operating Company", entity_type: "company", status: "active", parent_id: bluewater.id})
+
+entities = %{acme_holdings: acme_holdings, acme_trading: acme_trading, acme_treasury: acme_treasury, bluewater: bluewater, bluewater_op: bluewater_op}
+```
+
+Verify the closure table:
+
+```elixir
+BusinessEntities.list_descendants(acme_holdings) |> Enum.map(& &1.name)
+```
+
+## 3. Create the virtual account tree
+
+```
+Assets
+  Cash
+    USD
+      Nostro USD
+
+Liabilities
+  Client Deposits
+    USD
+      Acme Holdings
+        Operating
+        Payroll
+        Escrow
+      Bluewater Trust
+        Operating
+
+Income
+  Fees
+    Wire Fees
+
+Expenses
+  Interest Expense
+
+Suspense
+  USD Suspense
+```
+
+```elixir
+alias Logistiki.VirtualAccounts
+
+# Helper to create the tree recursively
+create = fn parent_id, code, type, normal, currency, children, f ->
+  {:ok, account} = VirtualAccounts.create_account(%{
+    code: code,
+    name: code |> String.split(":") |> List.last() |> String.capitalize(),
+    account_type: type,
+    currency: currency,
+    normal_balance: normal,
+    posting_allowed: children == [],
+    parent_id: parent_id
+  })
+  child_accounts = Enum.reduce(children, %{}, fn {c, t, n, cur, ch}, acc ->
+    Map.merge(acc, f.(account.id, c, t, n, cur, ch, f))
+  end)
+  Map.put(child_accounts, code, account)
+end
+
+accounts = create.(nil, "ASSETS", "asset", "debit", nil, [
+  {"ASSETS:CASH", "asset", "debit", nil, [
+    {"ASSETS:CASH:USD", "asset", "debit", nil, [
+      {"ASSETS:CASH:USD:NOSTRO", "asset", "debit", "USD", []}
+    ]}
+  ]}
+], create)
+
+accounts = Map.merge(accounts, create.(nil, "LIABILITIES", "liability", "credit", nil, [
+  {"LIABILITIES:CLIENT_DEPOSITS", "liability", "credit", nil, [
+    {"LIABILITIES:CLIENT_DEPOSITS:USD", "liability", "credit", nil, [
+      {"LIABILITIES:CLIENT_DEPOSITS:USD:ACME", "client", "credit", nil, [
+        {"LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "client", "credit", "USD", []},
+        {"LIABILITIES:CLIENT_DEPOSITS:USD:ACME:PAYROLL", "client", "credit", "USD", []},
+        {"LIABILITIES:CLIENT_DEPOSITS:USD:ACME:ESCROW", "client", "credit", "USD", []}
+      ]},
+      {"LIABILITIES:CLIENT_DEPOSITS:USD:BLUEWATER", "client", "credit", nil, [
+        {"LIABILITIES:CLIENT_DEPOSITS:USD:BLUEWATER:OPERATING", "client", "credit", "USD", []}
+      ]}
+    ]}
+  ]}
+], create))
+
+accounts = Map.merge(accounts, create.(nil, "INCOME", "income", "credit", nil, [
+  {"INCOME:FEES", "income", "credit", nil, [
+    {"INCOME:FEES:WIRE", "fee", "credit", "USD", []}
+  ]}
+], create))
+
+accounts = Map.merge(accounts, create.(nil, "EXPENSES", "expense", "debit", nil, [
+  {"EXPENSES:INTEREST", "expense", "debit", "USD", []}
+], create))
+
+accounts = Map.merge(accounts, create.(nil, "SUSPENSE", "suspense", "debit", nil, [
+  {"SUSPENSE:USD", "suspense", "debit", "USD", []}
+], create))
+
+"Created #{map_size(accounts)} accounts."
+```
+
+## 4. Link entities to accounts
+
+```elixir
+alias Logistiki.Relationships
+
+Relationships.link_entity_account(entities.acme_holdings, accounts["LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING"], :owner)
+Relationships.link_entity_account(entities.acme_holdings, accounts["LIABILITIES:CLIENT_DEPOSITS:USD:ACME:PAYROLL"], :owner)
+Relationships.link_entity_account(entities.acme_holdings, accounts["LIABILITIES:CLIENT_DEPOSITS:USD:ACME:ESCROW"], :owner)
+Relationships.link_entity_account(entities.bluewater, accounts["LIABILITIES:CLIENT_DEPOSITS:USD:BLUEWATER:OPERATING"], :owner)
+
+"Entities linked to accounts."
+```
+
+## 5. Process a deposit event
+
+A `$1,000` deposit received into Acme Operating. The pipeline will:
+normalize → generate Datalog facts → evaluate business rules → select a policy →
+resolve a template → build a journal → validate invariants → execute via the
+ledger backend → record audit evidence.
+
+```elixir
+deposit = Logistiki.Demo.Seeds.deposit_event(
+  "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING",
+  "1000.00"
+)
+
+{:ok, deposit_result} = Logistiki.process(deposit)
+```
+
+## 6. Show the policy selected by Datalog
+
+The knowledge layer evaluated the event's facts and derived
+`policy(:evt, :cash_deposit)` — the only matching policy.
+
+```elixir
+deposit_result.policy
+```
+
+## 7. Show the generated journal
+
+```elixir
+deposit_result.journal.status
+```
+
+```elixir
+deposit_result.journal.selected_policy
+```
+
+```elixir
+deposit_result.journal.idempotency_key
+```
+
+## 8. Show the generated postings
+
+Two postings: debit cash (nostro), credit client liability.
+
+```elixir
+alias Logistiki.Accounting
+Accounting.list_postings(deposit_result.journal)
+```
+
+## 9. Show the ledger backend result
+
+```elixir
+deposit_result.ledger_result.backend
+```
+
+```elixir
+deposit_result.ledger_result.status
+```
+
+## 10. Show balance
+
+Cash account (debit balance = positive):
+
+```elixir
+{:ok, [cash_balance]} = Logistiki.balance("ASSETS:CASH:USD:NOSTRO")
+cash_balance
+```
+
+Client liability account (credit balance = negative):
+
+```elixir
+{:ok, [client_balance]} = Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+client_balance
+```
+
+Parent account aggregates descendants:
+
+```elixir
+{:ok, acme_balances} = Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME")
+Enum.reduce(acme_balances, Decimal.new(0), fn b, acc -> Decimal.add(b.net, acc) end)
+```
+
+Entity-owned accounts:
+
+```elixir
+{:ok, entity_balances} = Logistiki.balance_for_entity(entities.acme_holdings)
+Enum.reduce(entity_balances, Decimal.new(0), fn b, acc -> Decimal.add(b.net, acc) end)
+```
+
+## 11. Show statement (with running balance)
+
+```elixir
+{:ok, lines} = Logistiki.statement("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+
+Enum.map(lines, fn line ->
+  %{
+    date: line.date,
+    account: line.account_code,
+    debit: line.debit,
+    credit: line.credit,
+    running_balance: line.running_balance,
+    policy: line.selected_policy
+  }
+end)
+```
+
+## 12. Process a wire fee event
+
+A `$25` wire fee assessed to Acme Operating.
+
+```elixir
+fee = Logistiki.Demo.Seeds.fee_event(
+  "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING",
+  "25.00"
+)
+
+{:ok, fee_result} = Logistiki.process(fee)
+```
+
+The knowledge layer selected `:corporate_wire_fee` because:
+
+* `event_type(:evt, :fee_assessed)`
+* `event_fee_type(:evt, :wire_fee)`
+* `event_entity_type(:evt, :corporate)`
+
+```elixir
+fee_result.policy
+```
+
+Balances after the fee (client liability reduced by $25):
+
+```elixir
+{:ok, [client_after_fee]} = Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+client_after_fee.net
+```
+
+```elixir
+{:ok, [fee_income]} = Logistiki.balance("INCOME:FEES:WIRE")
+fee_income.net
+```
+
+## 13. Reverse the mistaken fee
+
+The fee was applied in error. Reversing creates a **new** journal that exactly
+negates the original postings, and marks the original `reversed`.
+
+```elixir
+{:ok, reversal_result} = Logistiki.Ledger.reverse_journal(fee_result.journal, %{reason: "mistaken fee"})
+```
+
+```elixir
+reversal_result.status
+```
+
+```elixir
+reversal_result.details[:reversal].reversal_of_id
+```
+
+The original journal is now `reversed`:
+
+```elixir
+original = Accounting.get_journal!(fee_result.journal.id)
+original.status
+```
+
+## 14. Show balance restored
+
+The reversal cancels the fee. The client balance is back to -$1,000:
+
+```elixir
+{:ok, [client_restored]} = Logistiki.balance("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
+client_restored.net
+```
+
+Fee income is back to zero:
+
+```elixir
+{:ok, [fee_restored]} = Logistiki.balance("INCOME:FEES:WIRE")
+fee_restored.net
+```
+
+## 15. Show audit evidence explaining everything
+
+Every pipeline stage was recorded as an audit event. The full trail explains
+*why* each posting exists — the business event, the rules, the policy, the
+template, the journal, and the ledger result.
+
+```elixir
+trail = Logistiki.Audit.trail_for_event(deposit.id)
+
+Enum.map(trail, fn e ->
+  %{action: e.action, resource_type: e.resource_type, journal_id: e.journal_id}
+end)
+```
+
+The fee event's audit trail:
+
+```elixir
+fee_trail = Logistiki.Audit.trail_for_event(fee.id)
+
+Enum.map(fee_trail, & &1.action)
+```
+
+## 16. Trial balance
+
+A trial balance across all posted and reversed journals. Debits and credits
+must balance per currency.
+
+```elixir
+{:ok, tb} = Logistiki.trial_balance()
+```
+
+```elixir
+tb.balanced
+```
+
+```elixir
+tb.currencies
+```
+
+```elixir
+Enum.map(tb.lines, fn line ->
+  %{
+    account: line.account_code,
+    debits: line.debit_total,
+    credits: line.credit_total,
+    net: line.net,
+    currency: line.currency
+  }
+end)
+```
+
+## 17. Balance sheet
+
+```elixir
+bs = Logistiki.balance_sheet()
+```
+
+```elixir
+%{
+  assets: bs.totals_by_currency["USD"][:assets],
+  liabilities: bs.totals_by_currency["USD"][:liabilities],
+  equity: bs.totals_by_currency["USD"][:equity]
+}
+```
+
+## 18. Income statement
+
+```elixir
+is = Logistiki.income_statement()
+```
+
+```elixir
+is.net_profit_by_currency["USD"]
+```
+
+## 19. Process a no-accounting-impact event
+
+A customer account was opened. This event has `has_accounting_impact: false` —
+it produces audit evidence but no journal.
+
+```elixir
+account_opened = Logistiki.Demo.Seeds.account_opened_event(
+  "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:ESCROW"
+)
+
+{:ok, open_result} = Logistiki.process(account_opened)
+```
+
+```elixir
+open_result.journal
+```
+
+```elixir
+open_result.explanation[:reason]
+```
+
+## 20. Switch to the Beancount oracle backend
+
+The Beancount backend verifies every journal with `Beancount.check/1` before
+persisting. It is the **executable specification** for Logistiki accounting
+behavior.
+
+```elixir
+Logistiki.put_ledger_backend(Logistiki.Ledger.Beancount)
+
+another_deposit = Logistiki.Demo.Seeds.deposit_event(
+  "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:PAYROLL",
+  "500.00"
+)
+
+{:ok, oracle_result} = Logistiki.process(another_deposit)
+```
+
+```elixir
+oracle_result.ledger_result.backend
+```
+
+```elixir
+oracle_result.ledger_result.details[:oracle]
+```
+
+Verify the full ledger with `Beancount.check/1`:
+
+```elixir
+Logistiki.Ledger.Beancount.verify_ledger()
+```
+
+Get oracle balances (BQL `SELECT account, sum(position) GROUP BY account`):
+
+```elixir
+{:ok, oracle_balances} = Logistiki.Ledger.Beancount.oracle_balances()
+```
+
+```elixir
+# Show the oracle's view of the cash account
+{:ok, cash_account} = Logistiki.VirtualAccounts.get_account_by_code("ASSETS:CASH:USD:NOSTRO")
+bc_name = Logistiki.Ledger.BeancountMapper.to_beancount_account(cash_account)
+oracle_balances[bc_name]
+```
+
+## 21. General ledger view
+
+All posted and reversed postings, ordered by effective date and journal:
+
+```elixir
+gl = Logistiki.general_ledger()
+
+Enum.map(gl.lines, fn line ->
+  %{
+    date: line.date,
+    account: line.account_code,
+    direction: if(line.debit, do: "debit", else: "credit"),
+    amount: line.debit || line.credit,
+    currency: line.currency,
+    policy: line.selected_policy
+  }
+end)
+```
+
+## 22. Backend agreement
+
+The simulation and Beancount backends should agree. Both compute balances from
+the same persisted postings; the Beancount backend additionally verifies each
+journal with the oracle.
+
+```elixir
+# Switch back to simulation for the final comparison
+Logistiki.put_ledger_backend(Logistiki.Ledger.Simulation)
+
+{:ok, [sim_cash]} = Logistiki.balance("ASSETS:CASH:USD:NOSTRO")
+```
+
+```elixir
+# Oracle view
+oracle_balances[bc_name]
+```
+
+```elixir
+# Simulation view
+sim_cash.net
+```
+
+Both should show the same positive (debit) balance for the cash account.
+
+---
+
+## Summary
+
+| Step    | What happened                                                                 |
+| ------- | ----------------------------------------------------------------------------- |
+| Setup   | SQLite in-memory database created and migrated — no PostgreSQL needed       |
+| 1       | Loaded the Datalog knowledge program                                          |
+| 2       | Created the Acme Holdings + Bluewater Trust entity trees                      |
+| 3       | Created the Assets / Liabilities / Income / Expenses / Suspense account trees |
+| 4       | Linked entities to accounts with `:owner` relationships                       |
+| 5       | Processed a $1,000 deposit — `Logistiki.process/1`                          |
+| 6       | Datalog selected `:cash_deposit`                                              |
+| 7       | Journal built and posted (status `"posted"`)                                  |
+| 8       | Two postings: debit cash, credit client liability                             |
+| 9       | Simulation backend executed                                                   |
+| 10      | Balances: cash +$1,000, client -$1,000                                        |
+| 11      | Statement with running balance                                                |
+| 12      | Processed a $25 wire fee — `:corporate_wire_fee`                            |
+| 13      | Reversed the mistaken fee — new journal, original marked `reversed`         |
+| 14      | Balances restored: client back to -$1,000, fee income back to $0              |
+| 15      | Audit trail explains every step                                               |
+| 16      | Trial balance balances per currency                                           |
+| 17–18 | Balance sheet and income statement                                            |
+| 19      | No-accounting-impact event (account opened) — no journal, audit only        |
+| 20      | Beancount oracle backend verifies journals                                    |
+| 21      | General ledger view                                                           |
+| 22      | Simulation and Beancount backends agree                                       |

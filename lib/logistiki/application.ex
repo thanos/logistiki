@@ -3,7 +3,9 @@ defmodule Logistiki.Application do
 
   use Application
 
+  @doc false
   @impl true
+  @spec start(Application.start_type(), term()) :: Supervisor.on_start()
   def start(_type, _args) do
     children = [
       Logistiki.Repo

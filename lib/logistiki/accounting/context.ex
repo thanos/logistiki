@@ -15,10 +15,49 @@ defmodule Logistiki.Accounting do
   alias Logistiki.Repo
   alias Logistiki.VirtualAccounts
 
-  @doc "Fetches a journal by id, raising if not found."
+  @doc """
+  Fetches a journal by id, raising if not found.
+
+  ## Arguments
+
+    * `id` — `integer()` — the journal primary key.
+
+  ## Returns
+
+    * `%Journal{}` — the journal with postings preloaded. Raises
+      `Ecto.NoResultsError` if not found.
+
+  ## Examples
+
+      iex> journal = Logistiki.Accounting.get_journal!(1)
+      iex> journal.status
+      "posted"
+      iex> journal.postings
+      [%Posting{...}, %Posting{...}]
+  """
+  @doc since: "0.1.0"
   def get_journal!(id), do: Repo.get!(Journal, id) |> Repo.preload(:postings)
 
-  @doc "Fetches a journal by id, returning `{:ok, journal}` or `{:error, :not_found}`."
+  @doc """
+  Fetches a journal by id.
+
+  ## Arguments
+
+    * `id` — `integer()` — the journal primary key.
+
+  ## Returns
+
+    * `{:ok, %Journal{}}` — the journal with postings preloaded.
+    * `{:error, :not_found}` — no journal with that id.
+
+  ## Examples
+
+      iex> {:ok, journal} = Logistiki.Accounting.get_journal(1)
+      iex> journal.status
+      "posted"
+      iex> {:error, :not_found} = Logistiki.Accounting.get_journal(999)
+  """
+  @doc since: "0.1.0"
   def get_journal(id) do
     case Repo.get(Journal, id) do
       nil -> {:error, :not_found}
@@ -26,12 +65,50 @@ defmodule Logistiki.Accounting do
     end
   end
 
-  @doc "Lists postings for `journal`."
+  @doc """
+  Lists postings for `journal`, ordered by sequence.
+
+  ## Arguments
+
+    * `journal` — `%Journal{}` — the journal whose postings to list.
+
+  ## Returns
+
+    * `[Posting.t()]` — ordered by `sequence` ascending.
+
+  ## Examples
+
+      iex> Logistiki.Accounting.list_postings(journal)
+      [%Posting{sequence: 1, ...}, %Posting{sequence: 2, ...}]
+  """
+  @doc since: "0.1.0"
   def list_postings(%Journal{id: id}) do
     Repo.all(from p in Posting, where: p.journal_id == ^id, order_by: [asc: p.sequence])
   end
 
-  @doc "Lists journals, optionally filtered by `:status` or `:event_id`."
+  @doc """
+  Lists journals, optionally filtered, with postings preloaded.
+
+  ## Arguments
+
+    * `opts` — `keyword()` of options:
+        * `:status` — `String.t` — e.g. `"posted"`, `"draft"`, `"reversed"`
+        * `:event_id` — `String.t` — filter by originating event id
+
+  ## Returns
+
+    * `[Journal.t()]` — ordered by `inserted_at` descending, with `:postings`
+      preloaded. Empty list if none match.
+
+  ## Examples
+
+      iex> Logistiki.Accounting.list_journals(status: "posted")
+      [%Journal{status: "posted", postings: [%Posting{...}, ...]}, ...]
+
+      iex> Logistiki.Accounting.list_journals(event_id: "evt_001")
+      [%Journal{event_id: "evt_001", ...}]
+  """
+  @doc since: "0.1.0"
   def list_journals(opts \\ []) do
     Journal
     |> maybe_filter(:status, opts)
@@ -41,6 +118,7 @@ defmodule Logistiki.Accounting do
     |> Repo.preload(:postings)
   end
 
+  # maybe_filter — private helper.
   defp maybe_filter(query, key, opts) do
     case Keyword.get(opts, key) do
       nil -> query
@@ -57,6 +135,7 @@ defmodule Logistiki.Accounting do
 
   Returns `{:ok, posted_journal}` or `{:error, %Logistiki.Error{}}`.
   """
+  @doc since: "0.1.0"
   def post_journal(%Journal{status: "draft"} = journal, postings) do
     with :ok <- InvariantValidator.validate(journal, postings) do
       Repo.transaction(fn ->
@@ -132,6 +211,7 @@ defmodule Logistiki.Accounting do
     |> Journal.changeset(attrs)
   end
 
+  # insert_postings — private helper.
   defp insert_postings(journal, postings) do
     account_codes = Enum.map(postings, & &1.account_code) |> Enum.uniq()
     account_by_code = accounts_by_code(account_codes)
@@ -160,15 +240,18 @@ defmodule Logistiki.Accounting do
     {:ok, inserted}
   end
 
+  # accounts_by_code — private helper.
   defp accounts_by_code(codes) do
     VirtualAccounts.list_accounts()
     |> Enum.into(%{}, fn a -> {a.code, a} end)
     |> Map.take(codes)
   end
 
+  # normalize_transaction_result — private helper.
   defp normalize_transaction_result({:ok, result}), do: {:ok, result}
   defp normalize_transaction_result({:error, reason}), do: {:error, to_error(reason)}
 
+  # to_error — private helper.
   defp to_error(%Error{} = error), do: error
   defp to_error(%Ecto.Changeset{} = cs), do: Error.new(:backend_error, message: "persistence failed", details: inspect(cs), stage: :persistence)
   defp to_error(reason), do: Error.new(:backend_error, message: inspect(reason), stage: :persistence)

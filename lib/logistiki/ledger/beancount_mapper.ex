@@ -36,6 +36,7 @@ defmodule Logistiki.Ledger.BeancountMapper do
   @normal_debit_types ~w(asset expense settlement)a
 
   @doc "Maps a `%VirtualAccount{}` to a deterministic Beancount account name."
+  @doc since: "0.1.0"
   def to_beancount_account(%VirtualAccount{code: code, account_type: type}) do
     root = Map.fetch!(@root_by_type, type)
     segments = String.split(code, ":")
@@ -45,6 +46,7 @@ defmodule Logistiki.Ledger.BeancountMapper do
   end
 
   @doc "Maps a list of accounts to Beancount `open` directives."
+  @doc since: "0.1.0"
   def to_beancount_opens(accounts, date \\ ~D[2026-01-01]) do
     Enum.map(accounts, fn account ->
       Beancount.open(date, to_beancount_account(account), [account.currency || "USD"])
@@ -52,6 +54,7 @@ defmodule Logistiki.Ledger.BeancountMapper do
   end
 
   @doc "Maps a Logistiki posting to a Beancount posting (signed amount)."
+  @doc since: "0.1.0"
   def to_beancount_posting(%Posting{} = posting, %VirtualAccount{} = account) do
     beancount_account = to_beancount_account(account)
     signed = signed_amount(posting, account)
@@ -59,6 +62,7 @@ defmodule Logistiki.Ledger.BeancountMapper do
   end
 
   @doc "Maps a Logistiki journal + postings + accounts to a Beancount transaction directive."
+  @doc since: "0.1.0"
   def to_beancount_directive(%Journal{} = journal, postings, accounts_by_code) do
     date = journal.effective_date || Date.utc_today()
     flag = "*"
@@ -85,6 +89,7 @@ defmodule Logistiki.Ledger.BeancountMapper do
   end
 
   @doc "Converts a Beancount balances result into a map of account -> balance."
+  @doc since: "0.1.0"
   def from_beancount_balance(%Beancount.Query.Result{rows: rows, columns: columns}) do
     account_idx = Enum.find_index(columns, &(&1 == "account"))
     balance_idx = Enum.find_index(columns, &(&1 == "balance"))
@@ -99,6 +104,7 @@ defmodule Logistiki.Ledger.BeancountMapper do
   def from_beancount_balance({:error, _} = err), do: err
 
   @doc "Converts a Beancount query row into a plain map of column -> value."
+  @doc since: "0.1.0"
   def from_beancount_entry(%Beancount.Query.Result{rows: rows, columns: columns}) do
     Enum.map(rows, fn row ->
       Enum.zip(columns, row) |> Enum.into(%{})
@@ -106,9 +112,11 @@ defmodule Logistiki.Ledger.BeancountMapper do
   end
 
   @doc "Returns the beancount root for a Logistiki account type."
+  @doc since: "0.1.0"
   def root_for_type(type), do: Map.fetch!(@root_by_type, to_string(type))
 
   @doc "True when the account type has a debit normal balance."
+  @doc since: "0.1.0"
   def normal_debit?(type) when type in @normal_debit_types, do: true
   def normal_debit?(_), do: false
 
@@ -120,9 +128,11 @@ defmodule Logistiki.Ledger.BeancountMapper do
   (assets positive, liabilities/income negative) and match Logistiki's
   net = debit - credit projection.
   """
+  @doc since: "0.1.0"
   def signed_amount(%Posting{debit_credit: "debit", amount: a}, _account), do: a
   def signed_amount(%Posting{debit_credit: "credit", amount: a}, _account), do: Decimal.negate(a)
 
+  # camelize — private helper.
   defp camelize(segment) do
     segment
     |> String.replace("_", " ")
@@ -130,8 +140,10 @@ defmodule Logistiki.Ledger.BeancountMapper do
     |> Enum.map_join(&capitalize_first/1)
   end
 
+  # capitalize_first — private helper.
   defp capitalize_first(""), do: ""
 
+  # capitalize_first — private helper.
   defp capitalize_first(str) do
     {first, rest} = String.next_grapheme(str)
     String.upcase(first) <> rest

@@ -8,7 +8,30 @@ defmodule Logistiki.Knowledge.PolicySelector do
 
   alias Logistiki.Knowledge.KnowledgeBase
 
-  @doc "Returns `{:ok, policy}` or `{:error, reason}` for `normalized_event`."
+  @doc """
+  Returns the accounting policy for `normalized_event`, or an error.
+
+  ## Arguments
+
+    * `normalized_event` — `%Logistiki.Event.Normalized{}`.
+
+  ## Returns
+
+    * `{:ok, atom()}` — the selected policy (e.g. `:cash_deposit`).
+    * `{:error, :blocked_event}` — a business rule blocked the event.
+    * `{:error, :approval_required}` — the event requires approval.
+    * `{:error, :no_policy_found}` — no policy matched.
+    * `{:error, term()}` — knowledge evaluation failed.
+
+  ## Examples
+
+      iex> {:ok, :cash_deposit} = Logistiki.Knowledge.PolicySelector.select(normalized_deposit)
+      iex> {:error, :blocked_event} = Logistiki.Knowledge.PolicySelector.select(blocked_event)
+      iex> {:error, :no_policy_found} = Logistiki.Knowledge.PolicySelector.select(unknown_event)
+  """
+  @doc since: "0.1.0"
+  @spec select(Logistiki.Event.Normalized.t()) ::
+          {:ok, atom()} | {:error, :blocked_event | :approval_required | :no_policy_found | term()}
   def select(normalized_event) do
     case KnowledgeBase.evaluate(normalized_event) do
       {:ok, %{blocked: true}} -> {:error, :blocked_event}

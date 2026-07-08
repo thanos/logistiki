@@ -78,6 +78,7 @@ defmodule Logistiki.Ledger.Simulation do
     {:ok, ProjectionEngine.trial_balance(opts)}
   end
 
+  # compute_affected_balances — private helper.
   defp compute_affected_balances(journal, opts) do
     postings = journal.postings || []
 

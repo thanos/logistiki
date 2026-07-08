@@ -6,6 +6,9 @@ defmodule Logistiki.Projections.GeneralLedger do
   accounts.
   """
 
+  @typedoc """
+  The struct type. See the module documentation for field details and examples.
+  """
   @type t :: %__MODULE__{lines: [Logistiki.Projections.StatementLine.t()]}
 
   defstruct lines: []

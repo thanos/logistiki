@@ -14,6 +14,9 @@ defmodule Logistiki.Projections.TrialBalance do
           currency: String.t()
         }
 
+  @typedoc """
+  The struct type. See the module documentation for field details and examples.
+  """
   @type t :: %__MODULE__{
           lines: [line()],
           currencies: [String.t()],

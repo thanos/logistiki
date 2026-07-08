@@ -87,6 +87,7 @@ defmodule Logistiki.Ledger.Beancount do
   Renders all posted journals to a Beancount ledger and verifies it with
   `Beancount.check/1`. Used by the regression suite to exercise the oracle.
   """
+  @doc since: "0.1.0"
   def verify_ledger(opts \\ []) do
     _ = opts
 
@@ -115,6 +116,7 @@ defmodule Logistiki.Ledger.Beancount do
   end
 
   @doc "Returns Beancount balances for all posted journals (oracle projection)."
+  @doc since: "0.1.0"
   def oracle_balances(opts \\ []) do
     currency = Keyword.get(opts, :currency)
 
@@ -151,6 +153,7 @@ defmodule Logistiki.Ledger.Beancount do
     end
   end
 
+  # verify_with_oracle — private helper.
   defp verify_with_oracle(journal, postings) do
     account_codes = Enum.map(postings, & &1.account_code) |> Enum.uniq()
     accounts = accounts_by_code(account_codes)
@@ -173,18 +176,21 @@ defmodule Logistiki.Ledger.Beancount do
     end
   end
 
+  # build_and_verify_reversal — private helper.
   defp build_and_verify_reversal(journal, attrs) do
     with :ok <- verify_reversal_with_oracle(journal, attrs) do
       Accounting.reverse_journal(journal, attrs)
     end
   end
 
+  # verify_reversal_with_oracle — private helper.
   defp verify_reversal_with_oracle(journal, attrs) do
     postings = Accounting.list_postings(journal)
     {:ok, reversal, reversal_postings} = Logistiki.Accounting.JournalBuilder.build_reversal(journal, postings, attrs)
     verify_with_oracle(reversal, reversal_postings)
   end
 
+  # oracle_error — private helper.
   defp oracle_error(%Beancount.Result{stderr: stderr, normalized: normalized}) do
     Logistiki.Error.new(:backend_error,
       message: "beancount oracle rejected the journal: #{stderr}#{inspect(normalized)}",
@@ -192,6 +198,7 @@ defmodule Logistiki.Ledger.Beancount do
     )
   end
 
+  # oracle_error — private helper.
   defp oracle_error(reason) do
     Logistiki.Error.new(:backend_error,
       message: "beancount oracle error: #{inspect(reason)}",
@@ -199,15 +206,18 @@ defmodule Logistiki.Ledger.Beancount do
     )
   end
 
+  # accounts_by_code — private helper.
   defp accounts_by_code(codes) when codes == [] do
     %{}
   end
 
+  # accounts_by_code — private helper.
   defp accounts_by_code(codes) do
     Repo.all(from a in VirtualAccount, where: a.code in ^codes)
     |> Enum.into(%{}, fn a -> {a.code, a} end)
   end
 
+  # compute_affected_balances — private helper.
   defp compute_affected_balances(journal, opts) do
     postings = journal.postings || []
 

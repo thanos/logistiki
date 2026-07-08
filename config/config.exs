@@ -17,6 +17,7 @@ config :beancount_ex, Beancount.Repo,
   migration_source: "beancount_schema_migrations"
 
 config :logistiki, Logistiki.Repo,
+  adapter: Ecto.Adapters.Postgres,
   username: System.get_env("LOGISTIKI_DB_USER", "thanos"),
   password: System.get_env("LOGISTIKI_DB_PASSWORD", ""),
   hostname: System.get_env("LOGISTIKI_DB_HOST", "localhost"),

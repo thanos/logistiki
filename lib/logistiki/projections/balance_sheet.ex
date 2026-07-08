@@ -11,6 +11,9 @@ defmodule Logistiki.Projections.BalanceSheet do
           totals_by_currency: %{String.t() => Decimal.t()}
         }
 
+  @typedoc """
+  The struct type. See the module documentation for field details and examples.
+  """
   @type t :: %__MODULE__{
           assets: section(),
           liabilities: section(),

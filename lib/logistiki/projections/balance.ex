@@ -7,6 +7,9 @@ defmodule Logistiki.Projections.Balance do
   for a credit balance.
   """
 
+  @typedoc """
+  The struct type. See the module documentation for field details and examples.
+  """
   @type t :: %__MODULE__{
           account_id: term() | nil,
           account_code: String.t() | nil,
@@ -20,6 +23,7 @@ defmodule Logistiki.Projections.Balance do
   defstruct [:account_id, :account_code, :currency, debit_total: Decimal.new(0), credit_total: Decimal.new(0), net: Decimal.new(0), posting_count: 0]
 
   @doc "Builds a balance from a row of `{debit_total, credit_total, count}` for `currency`."
+  @doc since: "0.1.0"
   def build(account_code, currency, debit_total, credit_total, count) do
     %__MODULE__{
       account_code: account_code,
@@ -32,5 +36,6 @@ defmodule Logistiki.Projections.Balance do
   end
 
   @doc "True when the balance is non-zero."
+  @doc since: "0.1.0"
   def nonzero?(%__MODULE__{net: net}), do: not Decimal.equal?(net, Decimal.new(0))
 end

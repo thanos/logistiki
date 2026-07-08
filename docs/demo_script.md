@@ -1,10 +1,27 @@
 # Demo script
 
-The demo scenario (`Logistiki.Demo.run_demo/0`) seeds the demo entity and account
-trees, links entities to accounts, and processes the demo business events
-end-to-end through the accounting pipeline.
+The demo scenario is available in two forms:
 
-## Running
+1. **Livebook** — `docs/livebooks/logistiki_demo.livemd`. Open it in
+   [Livebook](https://livebook.dev/) for an interactive, step-by-step walkthrough
+   with rendered output.
+
+2. **Script** — `Logistiki.Demo.run_demo/0` from an `iex` or `mix run` session.
+   Seeds the demo entity and account trees, links entities to accounts, processes
+   the demo business events end-to-end, and prints the results.
+
+## Running the livebook
+
+```bash
+# From the project root — no PostgreSQL required, the livebook uses SQLite in-memory:
+livebook open docs/livebooks/logistiki_demo.livemd
+```
+
+The livebook uses `Mix.install` with `LOGISTIKI_DB_ADAPTER=sqlite` and
+`ecto_sqlite3` to create an in-memory SQLite database. It runs migrations
+programmatically via `Ecto.Migrator`. No external services are needed.
+
+## Running the script
 
 On a fresh, migrated database:
 

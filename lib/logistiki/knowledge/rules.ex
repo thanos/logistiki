@@ -33,6 +33,23 @@ defmodule Logistiki.Knowledge.Rules do
     ledger_invariants: "Pure Elixir: debits equal credits, postings positive, immutable, etc."
   ]
 
-  @doc "Returns the rule categories with descriptions."
+  @doc """
+  Returns the rule categories with descriptions.
+
+  ## Returns
+
+    * `keyword()` — a keyword list of `category_atom => description_string`.
+
+  ## Examples
+
+      iex> Logistiki.Knowledge.Rules.categories()
+      [
+        business_rules: "Datalog-backed: should the event be processed / blocked / approved?",
+        accounting_policies: "Datalog-backed: which policy, template, roles, dimensions apply?",
+        ledger_invariants: "Pure Elixir: debits equal credits, postings positive, immutable, etc."
+      ]
+  """
+  @doc since: "0.1.0"
+  @spec categories() :: keyword()
   def categories, do: @categories
 end

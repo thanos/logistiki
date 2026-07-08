@@ -23,6 +23,37 @@ defmodule Logistiki.Knowledge.Program do
 
   Datalog decides facts and relationships. Elixir materializes journals and
   postings.
+
+  ## Generated functions
+
+  `use ExDatalog.Schema` generates these functions:
+
+    * `program/0` — returns the `ExDatalog.Program` with static facts (templates,
+      template_posting, requires_dimension, account_role_static).
+    * `new/0` — returns a blank program without compile-time facts (for runtime
+      fact injection).
+    * `materialize/1` — materializes the program. Returns
+      `{:ok, %ExDatalog.Knowledge{}}`.
+    * `query/2` — executes a named query against materialized knowledge.
+
+  ## Named queries
+
+    * `:selected_policy` — `find P where policy(:evt, P)` — the selected policy.
+    * `:account_roles` — `find R, C where account_role(:evt, R, C)` — resolved
+      roles.
+    * `:template_postings` — `find P, S, D, R, A, C where template_posting(...)`
+      — all template postings.
+
+  ## Static policies
+
+  | Policy | Event type | Condition |
+  |--------|-----------|-----------|
+  | `:cash_deposit` | `deposit_received` | — |
+  | `:corporate_wire_fee` | `fee_assessed` | `fee_type: wire_fee`, `entity_type: corporate` |
+  | `:retail_wire_fee` | `fee_assessed` | `fee_type: wire_fee`, `entity_type: individual` |
+  | `:internal_transfer` | `transfer_settled` | — |
+  | `:interest_accrual` | `interest_accrued` | — |
+  | `:refund_paid` | `refund_issued` | — |
   """
 
   use ExDatalog.Schema

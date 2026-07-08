@@ -36,6 +36,7 @@ defmodule Logistiki.MixProject do
     [
       {:ecto_sql, "~> 3.0"},
       {:postgrex, ">= 0.0.0"},
+      {:ecto_sqlite3, "~> 0.18", optional: true},
       {:ex_datalog, "~> 0.5"},
       {:beancount_ex, "~> 0.6"},
       {:decimal, "~> 3.1"},
@@ -51,6 +52,8 @@ defmodule Logistiki.MixProject do
     [
       description: "An embedded OTP accounting engine for Elixir applications.",
       licenses: ["MIT"],
+      maintainers: ["Thanos Vassilakis"],
+      files: ~w(lib docs .formatter.exs mix.exs README.md CHANGELOG.md LICENSE),
       links: %{"GitHub" => @source_url}
     ]
   end
@@ -58,9 +61,82 @@ defmodule Logistiki.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md" | Path.wildcard("docs/**/*.md")],
+      extras: [
+        "README.md",
+        "docs/livebooks/logistiki_demo.livemd",
+        "LICENSE" | Path.wildcard("docs/**/*.md")
+      ],
       source_url: @source_url,
-      source_ref: "v#{@version}"
+      source_ref: "v#{@version}",
+      groups_for_modules: [
+        "Public API": [Logistiki],
+        "Business Events": [Logistiki.Event, Logistiki.Event.Normalized, Logistiki.Events],
+        "Knowledge Layer": [
+          Logistiki.Knowledge,
+          Logistiki.Knowledge.Program,
+          Logistiki.Knowledge.KnowledgeBase,
+          Logistiki.Knowledge.Facts,
+          Logistiki.Knowledge.Query,
+          Logistiki.Knowledge.Result,
+          Logistiki.Knowledge.Rules,
+          Logistiki.Knowledge.PolicySelector,
+          Logistiki.Knowledge.TemplateResolver
+        ],
+        Accounting: [
+          Logistiki.Accounting,
+          Logistiki.Accounting.Journal,
+          Logistiki.Accounting.Posting,
+          Logistiki.Accounting.Money,
+          Logistiki.Accounting.Result,
+          Logistiki.Accounting.Pipeline,
+          Logistiki.Accounting.JournalBuilder,
+          Logistiki.Accounting.PostingBuilder,
+          Logistiki.Accounting.InvariantValidator,
+          Logistiki.Accounting.AccountingPolicy,
+          Logistiki.Accounting.AccountingTemplate
+        ],
+        "Ledger Backends": [
+          Logistiki.Ledger,
+          Logistiki.Ledger.Behaviour,
+          Logistiki.Ledger.Result,
+          Logistiki.Ledger.Simulation,
+          Logistiki.Ledger.Beancount,
+          Logistiki.Ledger.BeancountMapper
+        ],
+        Projections: [
+          Logistiki.Projections,
+          Logistiki.Projections.Balance,
+          Logistiki.Projections.StatementLine,
+          Logistiki.Projections.TrialBalance,
+          Logistiki.Projections.GeneralLedger,
+          Logistiki.Projections.BalanceSheet,
+          Logistiki.Projections.IncomeStatement,
+          Logistiki.Projections.ProjectionEngine
+        ],
+        Entities: [
+          Logistiki.BusinessEntities,
+          Logistiki.BusinessEntities.BusinessEntity,
+          Logistiki.BusinessEntities.BusinessEntityClosure,
+          Logistiki.VirtualAccounts,
+          Logistiki.VirtualAccounts.VirtualAccount,
+          Logistiki.VirtualAccounts.VirtualAccountClosure,
+          Logistiki.Relationships,
+          Logistiki.Relationships.EntityAccount
+        ],
+        Audit: [
+          Logistiki.Audit,
+          Logistiki.Audit.AuditEvent,
+          Logistiki.Audit.Evidence
+        ],
+        Infrastructure: [
+          Logistiki.Repo,
+          Logistiki.Application,
+          Logistiki.Error,
+          Logistiki.Telemetry,
+          Logistiki.Demo,
+          Logistiki.Demo.Seeds
+        ]
+      ]
     ]
   end
 
