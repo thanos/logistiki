@@ -8,7 +8,7 @@ defmodule Logistiki.MixProject do
     [
       app: :logistiki,
       version: @version,
-      elixir: "~> 1.19",
+      elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),

@@ -174,7 +174,7 @@ def deps do
 end
 ```
 
-Requires PostgreSQL and Elixir 1.19+.
+Requires PostgreSQL and Elixir 1.18+.
 
 ## Architecture overview
 
