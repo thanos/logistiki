@@ -1,6 +1,4 @@
 defmodule Logistiki.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
   @moduledoc false
 
   use Application
@@ -8,12 +6,12 @@ defmodule Logistiki.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: Logistiki.Worker.start_link(arg)
-      # {Logistiki.Worker, arg}
+      Logistiki.Repo
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
+    # v0.1.0 prefers deterministic functions and persisted state over
+    # long-running processes. A knowledge-program cache and projection
+    # supervisor are future work (see docs/vision.md roadmap).
     opts = [strategy: :one_for_one, name: Logistiki.Supervisor]
     Supervisor.start_link(children, opts)
   end
