@@ -54,7 +54,10 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
 
-      - name: Compile (warnings as errors)
+      - name: Compile dependencies
+        run: mix deps.compile
+
+      - name: Compile app (warnings as errors)
         run: mix compile --warnings-as-errors
 
       - name: Create and migrate test database
@@ -104,7 +107,10 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
 
-      - name: Compile
+      - name: Compile dependencies
+        run: mix deps.compile
+
+      - name: Compile app
         run: mix compile
 
       - name: Create and migrate test database
