@@ -60,7 +60,12 @@ jobs:
         run: mix test
 
       - name: Publish to Hex.pm
-        run: mix hex.publish --yes
+        # hex.publish needs ex_doc (`docs` task); that dep is not loaded under MIX_ENV=test
+        env:
+          MIX_ENV: dev
+        run: |
+          mix deps.get
+          mix hex.publish --yes
 
       - name: Extract version from tag
         id: version
