@@ -1,12 +1,14 @@
 defmodule Logistiki.Knowledge.MiscTest do
   use Logistiki.DataCase, async: true
 
-  alias Logistiki.Knowledge
   alias Logistiki.Event.Normalized
+  alias Logistiki.Knowledge
+  alias Logistiki.Knowledge.KnowledgeBase
+  alias Logistiki.Knowledge.Program
 
   describe "load_program/0" do
     test "returns the configured program module" do
-      assert Knowledge.load_program() == Logistiki.Knowledge.Program
+      assert Knowledge.load_program() == Program
     end
   end
 
@@ -38,7 +40,7 @@ defmodule Logistiki.Knowledge.MiscTest do
         })
 
       assert {:ok, knowledge} = Knowledge.materialize(event)
-      assert :cash_deposit in Logistiki.Knowledge.KnowledgeBase.derived_policies(knowledge)
+      assert :cash_deposit in KnowledgeBase.derived_policies(knowledge)
     end
   end
 
@@ -73,7 +75,7 @@ defmodule Logistiki.Knowledge.MiscTest do
   describe "KnowledgeBase.raw_knowledge/2" do
     test "returns materialized knowledge" do
       event = Normalized.new(%{type: "deposit_received", amount: Decimal.new("1.00")})
-      assert {:ok, _} = Logistiki.Knowledge.KnowledgeBase.raw_knowledge(event)
+      assert {:ok, _} = KnowledgeBase.raw_knowledge(event)
     end
 
     test "derived_account_roles returns role map" do
@@ -86,8 +88,8 @@ defmodule Logistiki.Knowledge.MiscTest do
           cash_account_code: "ASSETS:CASH"
         })
 
-      {:ok, knowledge} = Logistiki.Knowledge.KnowledgeBase.raw_knowledge(event)
-      roles = Logistiki.Knowledge.KnowledgeBase.derived_account_roles(knowledge)
+      {:ok, knowledge} = KnowledgeBase.raw_knowledge(event)
+      roles = KnowledgeBase.derived_account_roles(knowledge)
       assert roles[:client_liability_account] == "LIAB:ACME"
       assert roles[:cash_account] == "ASSETS:CASH"
     end

@@ -1,7 +1,7 @@
 defmodule Logistiki.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.1.1"
   @source_url "https://github.com/thanos/logistiki"
 
   def project do
@@ -19,7 +19,8 @@ defmodule Logistiki.MixProject do
       preferred_cli_env: [
         coveralls: :test,
         "coveralls.detail": :test,
-        "coveralls.html": :test
+        "coveralls.html": :test,
+        ci: :test
       ]
     ]
   end
@@ -30,7 +31,8 @@ defmodule Logistiki.MixProject do
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.html": :test,
-        credo: :dev
+        credo: :dev,
+        ci: :test
       ]
     ]
   end
@@ -160,7 +162,16 @@ defmodule Logistiki.MixProject do
       setup: ["deps.get", "ecto.setup"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      # Mirrors .github/workflows/ci.yml quality gates. Each step runs in a
+      # subprocess (`cmd`) so Credo's `exit({:shutdown, status})` cannot abort
+      # the BEAM mid-chain; Mix still stops the alias on the first non-zero exit.
+      ci: [
+        "cmd mix format --check-formatted",
+        "cmd mix compile --warnings-as-errors",
+        "cmd mix credo",
+        "cmd mix test --include concurrency --include postgres"
+      ]
     ]
   end
 end

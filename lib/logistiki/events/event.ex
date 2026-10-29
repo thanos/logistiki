@@ -24,8 +24,12 @@ defmodule Logistiki.Event do
   Every event struct built with `defevent` includes: `id`, `source_system`,
   `source_id`, `actor_id`, `occurred_at`, `effective_date`, `amount`,
   `currency`, `entity_id`, `account_id`, `account_code`, `counterparty_id`,
-  `product_code`, `jurisdiction`, `entity_type`, `metadata`. Additional
-  event-specific fields are declared inside the `defevent do ... end` block.
+  `product_code`, `jurisdiction`, `entity_type`, `has_accounting_impact`
+  (default `true`), `metadata`. Additional event-specific fields are declared
+  inside the `defevent do ... end` block.
+
+  Pass `has_accounting_impact: false` to `use Logistiki.Event` for events that
+  never post journals (e.g. `AccountOpened`).
 
   ## Dispatchers
 
@@ -41,6 +45,8 @@ defmodule Logistiki.Event do
 
     * `:type` — `String.t` — the event type string used by the knowledge layer
       (e.g. `"deposit_received"`, `"fee_assessed"`).
+    * `:has_accounting_impact` — `boolean()` — default for the common
+      `has_accounting_impact` field (default `true`).
 
   ## Example
 
@@ -54,6 +60,7 @@ defmodule Logistiki.Event do
       import Logistiki.Event, only: [defevent: 1]
 
       @event_type unquote(opts[:type])
+      @has_accounting_impact_default unquote(Keyword.get(opts, :has_accounting_impact, true))
 
       @impl true
       def event_type(_), do: @event_type
@@ -86,6 +93,8 @@ defmodule Logistiki.Event do
   """
   @doc since: "0.1.0"
   defmacro defevent(do: block) do
+    normalized_mod = Logistiki.Event.Normalized
+
     quote do
       @primary_key false
       embedded_schema do
@@ -104,6 +113,7 @@ defmodule Logistiki.Event do
         field(:product_code, :string)
         field(:jurisdiction, :string)
         field(:entity_type, :string)
+        field(:has_accounting_impact, :boolean, default: @has_accounting_impact_default)
         field(:metadata, :map, default: %{})
 
         unquote(block)
@@ -112,7 +122,7 @@ defmodule Logistiki.Event do
       @impl true
       def normalize(%__MODULE__{} = event) do
         normalized =
-          Logistiki.Event.Normalized.new(%{
+          unquote(normalized_mod).new(%{
             id: event.id,
             type: event_type(event),
             source_system: event.source_system,
@@ -129,7 +139,7 @@ defmodule Logistiki.Event do
             product_code: event.product_code,
             jurisdiction: event.jurisdiction,
             entity_type: event.entity_type,
-            has_accounting_impact: Map.get(event, :has_accounting_impact, true),
+            has_accounting_impact: event.has_accounting_impact,
             metadata: event.metadata
           })
           |> merge_extra_fields(event)

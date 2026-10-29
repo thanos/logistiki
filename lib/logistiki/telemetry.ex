@@ -36,7 +36,8 @@ defmodule Logistiki.Telemetry do
     [:logistiki, :ledger, :execute, :start],
     [:logistiki, :ledger, :execute, :stop],
     [:logistiki, :projection, :generate, :stop],
-    [:logistiki, :audit, :write, :stop]
+    [:logistiki, :audit, :write, :stop],
+    [:logistiki, :commit, :stop]
   ]
 
   @doc """
@@ -51,7 +52,7 @@ defmodule Logistiki.Telemetry do
       iex> [:logistiki, :event, :process, :start] in Logistiki.Telemetry.events()
       true
       iex> length(Logistiki.Telemetry.events())
-      13
+      14
   """
   @doc since: "0.1.0"
   @spec events() :: [[atom(), ...]]

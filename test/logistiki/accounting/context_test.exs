@@ -2,7 +2,7 @@ defmodule Logistiki.Accounting.ContextTest do
   use Logistiki.DataCase, async: false
 
   alias Logistiki.Accounting
-  alias Logistiki.Accounting.{Journal, Posting}
+  alias Logistiki.Accounting.Journal
   alias Logistiki.Demo.Seeds
 
   setup do

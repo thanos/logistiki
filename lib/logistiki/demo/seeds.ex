@@ -187,8 +187,10 @@ defmodule Logistiki.Demo.Seeds do
   @doc "Returns the demo deposit event for `account_code`."
   @doc since: "0.1.0"
   def deposit_event(account_code, amount, entity_type \\ "corporate") do
+    id = "demo_deposit_#{System.unique_integer([:positive])}"
+
     %DepositReceived{
-      id: "demo_deposit_#{:rand.uniform(1_000_000)}",
+      id: id,
       entity_type: entity_type,
       account_code: account_code,
       cash_account_code: "ASSETS:CASH:USD:NOSTRO",
@@ -197,15 +199,17 @@ defmodule Logistiki.Demo.Seeds do
       occurred_at: ~U[2026-07-07 12:00:00Z],
       effective_date: ~D[2026-07-07],
       source_system: "demo",
-      source_id: "demo_deposit"
+      source_id: id
     }
   end
 
   @doc "Returns the demo transfer event from `from_code` to `to_code`."
   @doc since: "0.1.0"
   def transfer_event(from_code, to_code, amount) do
+    id = "demo_transfer_#{System.unique_integer([:positive])}"
+
     %TransferSettled{
-      id: "demo_transfer_#{:rand.uniform(1_000_000)}",
+      id: id,
       account_code: from_code,
       destination_account_code: to_code,
       cash_account_code: "ASSETS:CASH:USD:NOSTRO",
@@ -214,15 +218,17 @@ defmodule Logistiki.Demo.Seeds do
       occurred_at: ~U[2026-07-07 13:00:00Z],
       effective_date: ~D[2026-07-07],
       source_system: "demo",
-      source_id: "demo_transfer"
+      source_id: id
     }
   end
 
   @doc "Returns the demo fee event."
   @doc since: "0.1.0"
   def fee_event(account_code, amount) do
+    id = "demo_fee_#{System.unique_integer([:positive])}"
+
     %FeeAssessed{
-      id: "demo_fee_#{:rand.uniform(1_000_000)}",
+      id: id,
       entity_type: "corporate",
       account_code: account_code,
       fee_income_account_code: "INCOME:FEES:WIRE",
@@ -232,20 +238,22 @@ defmodule Logistiki.Demo.Seeds do
       occurred_at: ~U[2026-07-07 14:00:00Z],
       effective_date: ~D[2026-07-07],
       source_system: "demo",
-      source_id: "demo_fee"
+      source_id: id
     }
   end
 
   @doc "Returns a no-accounting-impact account-opened event."
   @doc since: "0.1.0"
   def account_opened_event(account_code) do
+    id = "demo_open_#{System.unique_integer([:positive])}"
+
     %AccountOpened{
-      id: "demo_open_#{:rand.uniform(1_000_000)}",
+      id: id,
       account_code: account_code,
       occurred_at: ~U[2026-07-07 09:00:00Z],
       effective_date: ~D[2026-07-07],
       source_system: "demo",
-      source_id: "demo_open"
+      source_id: id
     }
   end
 end

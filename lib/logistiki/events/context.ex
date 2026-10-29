@@ -20,6 +20,7 @@ defmodule Logistiki.Events do
 
   import Ecto.Query
 
+  alias Logistiki.Accounting.Fingerprint
   alias Logistiki.Event
   alias Logistiki.Events.BusinessEvent
   alias Logistiki.Repo
@@ -57,6 +58,8 @@ defmodule Logistiki.Events do
         event_type: normalized.type,
         source_system: normalized.source_system,
         source_id: normalized.source_id,
+        external_event_id: normalized.id && to_string(normalized.id),
+        payload_fingerprint: Fingerprint.compute(normalized),
         actor_id: normalized.actor_id,
         occurred_at: normalized.occurred_at,
         effective_date: normalized.effective_date,

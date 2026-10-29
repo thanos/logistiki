@@ -20,6 +20,8 @@ defmodule Logistiki.Ledger.Beancount do
 
   alias Logistiki.Accounting
   alias Logistiki.Accounting.Journal
+  alias Logistiki.Accounting.JournalBuilder
+  alias Logistiki.Error
   alias Logistiki.Ledger.BeancountMapper
   alias Logistiki.Ledger.Result
   alias Logistiki.Projections.ProjectionEngine
@@ -153,6 +155,16 @@ defmodule Logistiki.Ledger.Beancount do
     end
   end
 
+  @doc """
+  Verifies a draft journal against the Beancount oracle without persisting.
+
+  Used by the accounting pipeline before the atomic Commit so oracle failure
+  produces zero durable financial effect.
+  """
+  @doc since: "0.1.1"
+  @spec verify_journal(Journal.t(), list()) :: :ok | {:error, Logistiki.Error.t()}
+  def verify_journal(journal, postings), do: verify_with_oracle(journal, postings)
+
   # verify_with_oracle — private helper.
   defp verify_with_oracle(journal, postings) do
     account_codes = Enum.map(postings, & &1.account_code) |> Enum.uniq()
@@ -188,14 +200,14 @@ defmodule Logistiki.Ledger.Beancount do
     postings = Accounting.list_postings(journal)
 
     {:ok, reversal, reversal_postings} =
-      Logistiki.Accounting.JournalBuilder.build_reversal(journal, postings, attrs)
+      JournalBuilder.build_reversal(journal, postings, attrs)
 
     verify_with_oracle(reversal, reversal_postings)
   end
 
   # oracle_error — private helper.
   defp oracle_error(%Beancount.Result{stderr: stderr, normalized: normalized}) do
-    Logistiki.Error.new(:backend_error,
+    Error.new(:backend_error,
       message: "beancount oracle rejected the journal: #{stderr}#{inspect(normalized)}",
       stage: :ledger_backend
     )
@@ -203,7 +215,7 @@ defmodule Logistiki.Ledger.Beancount do
 
   # oracle_error — private helper.
   defp oracle_error(reason) do
-    Logistiki.Error.new(:backend_error,
+    Error.new(:backend_error,
       message: "beancount oracle error: #{inspect(reason)}",
       stage: :ledger_backend
     )

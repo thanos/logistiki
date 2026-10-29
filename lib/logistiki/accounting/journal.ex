@@ -196,6 +196,7 @@ defmodule Logistiki.Accounting.Journal do
     |> validate_required([:status])
     |> validate_inclusion(:status, Enum.map(@statuses, &Atom.to_string/1))
     |> unique_constraint(:idempotency_key)
+    |> unique_constraint(:reversal_of_id, name: :journals_reversal_of_id_unique_index)
   end
 
   @doc """

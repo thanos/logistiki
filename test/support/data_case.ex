@@ -7,6 +7,13 @@ defmodule Logistiki.DataCase do
 
   use ExUnit.CaseTemplate
 
+  alias Ecto.Adapters.SQL.Sandbox
+  alias Logistiki.BusinessEntities
+  alias Logistiki.Knowledge.Program
+  alias Logistiki.Relationships
+  alias Logistiki.Repo
+  alias Logistiki.VirtualAccounts
+
   using do
     quote do
       alias Logistiki.Repo
@@ -19,17 +26,17 @@ defmodule Logistiki.DataCase do
   end
 
   setup tags do
-    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Logistiki.Repo, shared: not tags[:async])
-    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+    pid = Sandbox.start_owner!(Repo, shared: not tags[:async])
+    on_exit(fn -> Sandbox.stop_owner(pid) end)
     :ok
   end
 
   @doc "Returns the demo knowledge program module."
-  def knowledge_program, do: Logistiki.Knowledge.Program
+  def knowledge_program, do: Program
 
   @doc "Ensures all demo context modules are loaded."
   def ensure_loaded do
-    [Logistiki.BusinessEntities, Logistiki.VirtualAccounts, Logistiki.Relationships]
+    [BusinessEntities, VirtualAccounts, Relationships]
   end
 
   @doc "Extracts errors from a changeset as a keyword list of fields to messages."

@@ -23,6 +23,7 @@ defmodule Logistiki.Accounting.InvariantValidator do
 
   import Ecto.Query
 
+  alias Logistiki.Accounting.CurrencyPrecision
   alias Logistiki.Accounting.Journal
   alias Logistiki.Accounting.Posting
   alias Logistiki.Error
@@ -64,6 +65,7 @@ defmodule Logistiki.Accounting.InvariantValidator do
     with :ok <- require_min_two_postings(postings),
          :ok <- require_positive_amounts(postings),
          :ok <- require_currencies(postings),
+         :ok <- require_precision(postings),
          :ok <- require_balanced_per_currency(postings) do
       require_valid_directions(postings)
     end
@@ -390,9 +392,53 @@ defmodule Logistiki.Accounting.InvariantValidator do
            stage: :invariant_validation
          )}
 
+      currency_mismatch?(account, posting) ->
+        {:error,
+         Error.new(:currency_mismatch,
+           message:
+             "posting currency #{inspect(currency(posting))} does not match account currency #{inspect(account.currency)}",
+           details: %{
+             account_code: code,
+             posting_currency: currency(posting),
+             account_currency: account.currency
+           },
+           stage: :invariant_validation
+         )}
+
       true ->
         :ok
     end
+  end
+
+  defp currency_mismatch?(%{currency: nil}, _posting), do: false
+  defp currency_mismatch?(%{currency: ""}, _posting), do: false
+
+  defp currency_mismatch?(%{currency: account_currency}, posting) do
+    posting_currency = currency(posting)
+    is_binary(posting_currency) and posting_currency != account_currency
+  end
+
+  defp require_precision(postings) do
+    Enum.reduce_while(postings, :ok, fn p, :ok ->
+      case CurrencyPrecision.validate_amount(amount(p), currency(p) || "") do
+        :ok ->
+          {:cont, :ok}
+
+        {:error, :precision_invalid} ->
+          {:halt,
+           {:error,
+            Error.new(:precision_invalid,
+              message: "amount scale exceeds precision for currency #{inspect(currency(p))}",
+              details: %{
+                account_code: account_code(p),
+                currency: currency(p),
+                amount: amount(p) && Decimal.to_string(amount(p)),
+                max_scale: CurrencyPrecision.max_scale(currency(p) || "")
+              },
+              stage: :invariant_validation
+            )}}
+      end
+    end)
   end
 
   # ------------------------------------------------------------------

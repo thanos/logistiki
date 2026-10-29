@@ -3,13 +3,17 @@ defmodule Logistiki.PropertyTest do
 
   use ExUnitProperties
 
-  alias Logistiki.Accounting.{InvariantValidator, Journal, Posting}
+  alias Logistiki.Accounting.{InvariantValidator, Posting}
   alias Logistiki.Demo.Seeds
+  alias Logistiki.Ledger.Beancount, as: BeancountBackend
+  alias Logistiki.Ledger.BeancountMapper
+  alias Logistiki.Ledger.Simulation, as: SimulationBackend
+  alias Logistiki.VirtualAccounts
 
   setup do
     Seeds.run()
-    Logistiki.put_ledger_backend(Logistiki.Ledger.Simulation)
-    on_exit(fn -> Logistiki.put_ledger_backend(Logistiki.Ledger.Simulation) end)
+    Logistiki.put_ledger_backend(SimulationBackend)
+    on_exit(fn -> Logistiki.put_ledger_backend(SimulationBackend) end)
     :ok
   end
 
@@ -131,7 +135,7 @@ defmodule Logistiki.PropertyTest do
 
   property "simulation and beancount backends agree on deposit balances" do
     check all(amount <- amount_gen()) do
-      Logistiki.put_ledger_backend(Logistiki.Ledger.Simulation)
+      Logistiki.put_ledger_backend(SimulationBackend)
 
       event =
         Seeds.deposit_event(
@@ -143,9 +147,9 @@ defmodule Logistiki.PropertyTest do
 
       assert {:ok, [sim_cash]} = Logistiki.balance("ASSETS:CASH:USD:NOSTRO")
 
-      assert {:ok, oracle} = Logistiki.Ledger.Beancount.oracle_balances()
-      {:ok, cash_account} = Logistiki.VirtualAccounts.get_account_by_code("ASSETS:CASH:USD:NOSTRO")
-      cash_bc = Logistiki.Ledger.BeancountMapper.to_beancount_account(cash_account)
+      assert {:ok, oracle} = BeancountBackend.oracle_balances()
+      {:ok, cash_account} = VirtualAccounts.get_account_by_code("ASSETS:CASH:USD:NOSTRO")
+      cash_bc = BeancountMapper.to_beancount_account(cash_account)
 
       assert Map.has_key?(oracle, cash_bc)
       # Both should report a debit balance (positive) for cash.

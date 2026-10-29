@@ -13,5 +13,6 @@ else
 end
 
 config :logistiki, :ledger_backend, Logistiki.Ledger.Simulation
+config :logistiki, :async_audit_drain, false
 
 config :logger, level: :warning
