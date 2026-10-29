@@ -10,6 +10,7 @@ defmodule Logistiki.Audit do
   import Ecto.Query
 
   alias Logistiki.Audit.AuditEvent
+  alias Logistiki.Audit.AuditPending
   alias Logistiki.Audit.Evidence
   alias Logistiki.Repo
 
@@ -170,6 +171,69 @@ defmodule Logistiki.Audit do
         order_by: [asc: a.inserted_at]
       )
     )
+  end
+
+  @doc """
+  Drains pending enriched audit stages for `event_id` asynchronously.
+
+  Mandatory provenance is already committed inside `Accounting.Commit`. Drain
+  failures are recorded on the pending row and never roll back financial state.
+  """
+  @doc since: "0.1.1"
+  @spec drain_pending_async(term()) :: :ok
+  def drain_pending_async(event_id) do
+    if Application.get_env(:logistiki, :async_audit_drain, true) do
+      Task.start(fn -> drain_pending(event_id) end)
+    else
+      drain_pending(event_id)
+    end
+
+    :ok
+  end
+
+  @doc """
+  Synchronously drains pending enriched audit stages for `event_id`.
+  """
+  @doc since: "0.1.1"
+  @spec drain_pending(term()) :: :ok
+  def drain_pending(event_id) do
+    id = to_string(event_id)
+
+    pending =
+      from(p in AuditPending,
+        where: p.event_id == ^id and p.status == "pending",
+        order_by: [asc: p.id]
+      )
+      |> Repo.all()
+
+    Enum.each(pending, &drain_one/1)
+    :ok
+  end
+
+  defp drain_one(%AuditPending{} = pending) do
+    case record(%{
+           event_id: pending.event_id,
+           journal_id: pending.journal_id,
+           action: pending.action,
+           resource_type: pending.resource_type,
+           resource_id: pending.resource_id,
+           explanation: pending.explanation,
+           metadata: pending.metadata || %{}
+         }) do
+      {:ok, _} ->
+        pending
+        |> AuditPending.changeset(%{status: "drained", attempts: pending.attempts + 1})
+        |> Repo.update()
+
+      {:error, changeset} ->
+        pending
+        |> AuditPending.changeset(%{
+          status: "failed",
+          attempts: pending.attempts + 1,
+          last_error: inspect(changeset.errors)
+        })
+        |> Repo.update()
+    end
   end
 
   # maybe_filter — applies an optional equality filter from opts to query.

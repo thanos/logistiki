@@ -86,6 +86,8 @@ defmodule Logistiki.Event do
   """
   @doc since: "0.1.0"
   defmacro defevent(do: block) do
+    normalized_mod = Logistiki.Event.Normalized
+
     quote do
       @primary_key false
       embedded_schema do
@@ -112,7 +114,7 @@ defmodule Logistiki.Event do
       @impl true
       def normalize(%__MODULE__{} = event) do
         normalized =
-          Logistiki.Event.Normalized.new(%{
+          unquote(normalized_mod).new(%{
             id: event.id,
             type: event_type(event),
             source_system: event.source_system,

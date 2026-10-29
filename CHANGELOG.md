@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] — 2026-10-28
+
+### Added
+
+- **Atomic Commit** (`Logistiki.Accounting.Commit`): one `Logistiki.Repo`
+  `Ecto.Multi` binds business event, journal, postings, and mandatory
+  `commit_provenance` audit; enriched stages land in `audit_pending`.
+- **Idempotency contract**: unique `external_event_id`, unique
+  `(source_system, source_id)`, payload fingerprints, already-processed replay,
+  and `:idempotency_conflict` for same key / different payload.
+- **`Logistiki.lookup_outcome/1`**: reconcile after timeout/crash without a new key.
+- **Reversal at-most-once**: unique `reversal_of_id`, row lock, CAS
+  `posted→reversed`.
+- **DB immutability triggers** for posted postings/journals (posted→reversed only).
+- **Account lock at commit** (`FOR UPDATE`) for freeze/post serial semantics.
+- **Currency match** and **currency precision** invariants; `:as_of` on
+  balance/statement/trial_balance projections.
+- **L11-01…L11-22** regression suite under `test/logistiki/v011/` (Postgres
+  concurrency tags required in CI).
+- Docs: `docs/v0.1.1/{BASELINE_AND_RISK_REGISTER,TRANSACTION_AND_IDEMPOTENCY_CONTRACT,EMBEDDING_GUIDE,TEST_EVIDENCE,KNOWN_LIMITATIONS}.md`.
+
+### Changed
+
+- Pipeline no longer treats event persistence as non-fatal; audit is not a
+  post-commit MatchError risk for mandatory provenance.
+- Typed error codes extended (`:idempotency_conflict`, `:event_persist_failed`,
+  `:audit_persist_failed`, `:commit_failed`, `:precision_invalid`,
+  `:currency_mismatch`).
+
+### Security / durability
+
+- Atomicity is **Logistiki DB only** — not distributed with host Repos. See
+  embedding guide recovery protocol. No banking-production certification claim.
+
 ## [0.1.0] — 2026-07-08
 
 ### Added

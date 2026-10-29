@@ -15,6 +15,8 @@ through `Ecto.Adapters.SQL.Sandbox` (see `test/support/data_case.ex`).
 - `test/logistiki/projections/` — balance, statement, trial balance, sheets
 - `test/logistiki/integration_test.exs` — full pipeline end-to-end
 - `test/logistiki/property_test.exs` — StreamData property tests
+- `test/logistiki/v011/` — v0.1.1 L11-01…L11-22 durability / concurrency /
+  failure-injection / embedding regressions (PostgreSQL required for lock tests)
 
 ## Coverage by category
 
@@ -82,6 +84,10 @@ Results must match.
 
 ```bash
 mix test                    # full suite (uses logistiki_test DB)
+mix test --include concurrency --include postgres   # ensure L11 lock tests run
 mix test --only property    # property tests
 mix credo                   # static analysis
 ```
+
+CI fails the job if concurrency-tagged tests are excluded; see
+`.github/workflows/ci.yml` and `docs/v0.1.1/TEST_EVIDENCE.md`.

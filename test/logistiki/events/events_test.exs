@@ -2,7 +2,7 @@ defmodule Logistiki.EventsTest do
   use Logistiki.DataCase, async: true
 
   alias Logistiki.Event
-  alias Logistiki.Event.{DepositReceived, FeeAssessed, AccountOpened}
+  alias Logistiki.Event.{AccountOpened, DepositReceived, FeeAssessed}
   alias Logistiki.Events
 
   describe "normalize/1" do

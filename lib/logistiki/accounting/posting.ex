@@ -153,6 +153,7 @@ defmodule Logistiki.Accounting.Posting do
     |> validate_inclusion(:debit_credit, Enum.map(@directions, &Atom.to_string/1))
     |> validate_number(:amount, greater_than: 0)
     |> validate_number(:sequence, greater_than: 0)
+    |> unique_constraint([:journal_id, :sequence], name: :postings_journal_id_sequence_index)
   end
 
   @doc """

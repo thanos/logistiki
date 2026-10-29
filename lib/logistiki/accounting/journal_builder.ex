@@ -16,8 +16,8 @@ defmodule Logistiki.Accounting.JournalBuilder do
   alias Logistiki.Accounting.Journal
   alias Logistiki.Accounting.PostingBuilder
   alias Logistiki.Error
-  alias Logistiki.Knowledge.Result, as: KnowledgeResult
   alias Logistiki.Event.Normalized
+  alias Logistiki.Knowledge.Result, as: KnowledgeResult
 
   @doc """
   Builds a draft journal struct (with postings attached) from a knowledge

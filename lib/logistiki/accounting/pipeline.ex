@@ -8,6 +8,9 @@ defmodule Logistiki.Accounting.Pipeline do
       Event Normalization
           │
           ▼
+      Idempotency / Outcome Lookup
+          │
+          ▼
       Datalog Fact Generation
           │
           ▼
@@ -29,25 +32,23 @@ defmodule Logistiki.Accounting.Pipeline do
       Ledger Invariant Validation
           │
           ▼
-      Ledger Backend Execution
+      Atomic Commit (event + journal + postings + provenance)
           │
           ▼
-      Projection Generation
-          │
-          ▼
-      Audit Evidence
+      Async enriched audit drain
 
-  Each stage is represented here and recorded in the audit trail.
+  Pure decision stages run outside the database transaction. Durable writes for
+  accepted outcomes go through `Logistiki.Accounting.Commit`.
   """
 
-  alias Logistiki.Accounting.{InvariantValidator, JournalBuilder, Result}
+  alias Logistiki.Accounting.{Commit, InvariantValidator, JournalBuilder, Outcome, Result}
   alias Logistiki.Audit
-  alias Logistiki.Audit.Evidence
   alias Logistiki.Error
   alias Logistiki.Event
-  alias Logistiki.Events
   alias Logistiki.Knowledge
   alias Logistiki.Ledger
+  alias Logistiki.Ledger.Beancount, as: BeancountBackend
+  alias Logistiki.Projections.ProjectionEngine
   alias Logistiki.Telemetry
 
   @doc """
@@ -60,68 +61,94 @@ defmodule Logistiki.Accounting.Pipeline do
     start_mono = Telemetry.start([:logistiki, :event, :process], %{event_type: event_type(event)})
 
     with {:ok, normalized, s1} <- normalize_stage(event),
-         {:ok, persisted_event, s2} <- persist_stage(normalized, event),
+         {:ok, normalized} <- require_event_identity(normalized),
+         :proceed <- Outcome.resolve_idempotency(normalized),
          {:ok, knowledge_result, s3} <- knowledge_stage(normalized),
          {:ok, s4} <- business_rules_stage(knowledge_result, normalized),
          {:ok, journal, postings, explanation, s5} <- journal_stage(knowledge_result, normalized),
          {:ok, s6} <- invariant_stage(journal, postings),
-         {:ok, ledger_result, s7} <- ledger_stage(journal, postings, opts) do
-      stages = [s1, s2, s3, s4, s5, s6, s7]
-
-      Telemetry.stop([:logistiki, :event, :process], start_mono, %{
-        event_type: normalized.type,
-        policy: knowledge_result.policy
-      })
-
-      {:ok, audit_evidence_id, _} = audit_stage(normalized, journal, ledger_result, stages)
-
-      result = %Result{
-        event_id: normalized.id,
-        policy: knowledge_result.policy,
-        template: knowledge_result.template,
-        journal: ledger_result && ledger_result.details[:journal],
-        postings: postings,
-        ledger_result: ledger_result,
-        projection_updates: projection_updates(ledger_result),
-        audit_evidence_id: audit_evidence_id,
-        warnings: warnings_for(knowledge_result),
-        explanation: explanation
-      }
-
-      maybe_update_event_status(persisted_event, result)
-
+         {:ok, result} <-
+           finish_accounting(
+             %{
+               event: event,
+               normalized: normalized,
+               knowledge_result: knowledge_result,
+               stages: [s1, s3, s4, s5, s6],
+               opts: opts,
+               start_mono: start_mono
+             },
+             journal,
+             postings,
+             explanation
+           ) do
       {:ok, result}
     else
-      {:error, %Error{} = error} ->
-        Telemetry.stop([:logistiki, :event, :process], start_mono, %{error: error.code})
-        {:error, error}
+      {:replay, %Result{} = result} ->
+        Telemetry.stop([:logistiki, :event, :process], start_mono, %{
+          outcome: :already_processed,
+          event_id: result.event_id
+        })
 
-      {:blocked, %Error{} = error} ->
-        Telemetry.stop([:logistiki, :event, :process], start_mono, %{error: error.code})
-        {:error, error}
+        Telemetry.emit([:logistiki, :commit, :stop], %{count: 1}, %{outcome: :duplicate})
+        {:ok, result}
 
       {:no_impact, normalized, pre_stages} ->
-        Telemetry.stop([:logistiki, :event, :process], start_mono, %{policy: nil})
+        case Commit.decision(%{
+               event: event,
+               normalized: normalized,
+               status: "no_accounting_impact",
+               stages: pre_stages,
+               explanation: %{reason: :no_accounting_impact}
+             }) do
+          {:ok, _} ->
+            Telemetry.stop([:logistiki, :event, :process], start_mono, %{policy: nil})
+            Telemetry.emit([:logistiki, :commit, :stop], %{count: 1}, %{outcome: :accepted})
+            Audit.drain_pending_async(normalized.id)
 
-        stages =
-          pre_stages ++
-            [%{action: :no_accounting_impact, resource_type: :event, resource_id: normalized.id}]
+            {:ok,
+             %Result{
+               event_id: normalized.id,
+               policy: nil,
+               template: nil,
+               journal: nil,
+               postings: [],
+               ledger_result: nil,
+               projection_updates: %{},
+               audit_evidence_id: normalized.id,
+               warnings: [],
+               explanation: %{reason: :no_accounting_impact}
+             }}
 
-        {:ok, audit_evidence_id, _} = audit_stage(normalized, nil, nil, stages)
+          {:error, %Error{} = error} ->
+            emit_failure(start_mono, error)
+            {:error, error}
+        end
 
-        {:ok,
-         %Result{
-           event_id: normalized.id,
-           policy: nil,
-           template: nil,
-           journal: nil,
-           postings: [],
-           ledger_result: nil,
-           projection_updates: %{},
-           audit_evidence_id: audit_evidence_id,
-           warnings: [],
-           explanation: %{reason: :no_accounting_impact}
-         }}
+      {:blocked, %Error{} = error, normalized, stages} ->
+        status =
+          if error.code == :approval_required, do: "requires_approval", else: "blocked"
+
+        case Commit.decision(%{
+               event: event,
+               normalized: normalized,
+               status: status,
+               stages: stages,
+               explanation: %{code: error.code, message: error.message}
+             }) do
+          {:ok, _} ->
+            emit_failure(start_mono, error)
+            Telemetry.emit([:logistiki, :commit, :stop], %{count: 1}, %{outcome: :rejected})
+            Audit.drain_pending_async(normalized.id)
+            {:error, error}
+
+          {:error, %Error{} = persist_error} ->
+            emit_failure(start_mono, persist_error)
+            {:error, persist_error}
+        end
+
+      {:error, %Error{} = error} ->
+        emit_failure(start_mono, error)
+        {:error, error}
     end
   end
 
@@ -129,7 +156,6 @@ defmodule Logistiki.Accounting.Pipeline do
   # Stages
   # ------------------------------------------------------------------
 
-  # normalize_stage — private helper.
   defp normalize_stage(event) do
     case Event.normalize(event) do
       {:ok, normalized} ->
@@ -152,31 +178,17 @@ defmodule Logistiki.Accounting.Pipeline do
     end
   end
 
-  # persist_stage — private helper.
-  defp persist_stage(normalized, event) do
-    case Events.persist(event) do
-      {:ok, persisted} ->
-        {:ok, persisted,
-         %{
-           action: :business_event_received,
-           resource_type: :business_event,
-           resource_id: persisted.id,
-           explanation: %{event_type: normalized.type, source_system: normalized.source_system}
-         }}
-
-      {:error, _reason} ->
-        # Persistence failure is non-fatal for processing; carry on with a nil record.
-        {:ok, nil,
-         %{
-           action: :business_event_received,
-           resource_type: :business_event,
-           resource_id: nil,
-           explanation: %{event_type: normalized.type, persisted: false}
-         }}
-    end
+  defp require_event_identity(%{has_accounting_impact: true, id: id})
+       when id in [nil, ""] do
+    {:error,
+     Error.new(:invalid_event,
+       message: "accounting-impact events require a non-nil event.id for idempotency",
+       stage: :normalization
+     )}
   end
 
-  # knowledge_stage — private helper.
+  defp require_event_identity(normalized), do: {:ok, normalized}
+
   defp knowledge_stage(normalized) do
     Telemetry.emit([:logistiki, :knowledge, :evaluate, :start], %{}, %{event_type: normalized.type})
 
@@ -204,39 +216,41 @@ defmodule Logistiki.Accounting.Pipeline do
     end
   end
 
-  # business_rules_stage — private helper.
   defp business_rules_stage(result, normalized) do
+    stage = %{
+      action: :business_rules_evaluated,
+      resource_type: :event,
+      resource_id: normalized.id,
+      explanation: %{blocked: result.blocked, requires_approval: result.requires_approval}
+    }
+
     cond do
       result.blocked ->
         {:blocked,
          Error.new(:blocked_event,
            message: "event #{normalized.type} was blocked by a business rule",
            stage: :business_rules
-         )}
+         ), normalized, [stage]}
 
       result.requires_approval ->
         {:blocked,
          Error.new(:approval_required,
            message: "event #{normalized.type} requires approval",
            stage: :business_rules
-         )}
+         ), normalized, [stage]}
 
       not normalized.has_accounting_impact ->
         {:no_impact, normalized,
-         [%{action: :no_accounting_impact, resource_type: :event, resource_id: normalized.id}]}
+         [
+           stage,
+           %{action: :no_accounting_impact, resource_type: :event, resource_id: normalized.id}
+         ]}
 
       true ->
-        {:ok,
-         %{
-           action: :business_rules_evaluated,
-           resource_type: :event,
-           resource_id: normalized.id,
-           explanation: %{blocked: false, requires_approval: false}
-         }}
+        {:ok, stage}
     end
   end
 
-  # journal_stage — private helper.
   defp journal_stage(%{policy: nil} = result, normalized) do
     {:ok, nil, [], JournalBuilder.build(result, normalized) |> elem(2),
      %{
@@ -247,7 +261,6 @@ defmodule Logistiki.Accounting.Pipeline do
      }}
   end
 
-  # journal_stage — private helper.
   defp journal_stage(result, normalized) do
     Telemetry.emit([:logistiki, :policy, :select, :stop], %{}, %{policy: result.policy})
     Telemetry.emit([:logistiki, :template, :select, :stop], %{}, %{template: result.template})
@@ -276,7 +289,6 @@ defmodule Logistiki.Accounting.Pipeline do
     end
   end
 
-  # invariant_stage — private helper.
   defp invariant_stage(nil, []) do
     {:ok,
      %{
@@ -287,7 +299,6 @@ defmodule Logistiki.Accounting.Pipeline do
      }}
   end
 
-  # invariant_stage — private helper.
   defp invariant_stage(journal, postings) do
     case InvariantValidator.validate(journal, postings) do
       :ok ->
@@ -307,113 +318,203 @@ defmodule Logistiki.Accounting.Pipeline do
     end
   end
 
-  # ledger_stage — private helper.
-  defp ledger_stage(nil, [], _opts) do
-    {:ok, nil,
-     %{
-       action: :ledger_backend_execution_skipped,
-       resource_type: :journal,
-       resource_id: nil,
-       explanation: %{}
-     }}
-  end
+  defp finish_accounting(ctx, nil, [], explanation) do
+    %{
+      event: event,
+      normalized: normalized,
+      knowledge_result: knowledge_result,
+      stages: stages,
+      start_mono: start_mono
+    } = ctx
 
-  # ledger_stage — private helper.
-  defp ledger_stage(journal, postings, opts) do
-    backend = Ledger.backend()
-    journal_with_postings = %{journal | postings: postings}
-
-    Telemetry.emit([:logistiki, :ledger, :execute, :start], %{}, %{backend: backend})
-
-    case backend.execute_journal(journal_with_postings, opts) do
-      {:ok, ledger_result} ->
-        Telemetry.emit([:logistiki, :ledger, :execute, :stop], %{}, %{
-          backend: backend,
-          journal_id: ledger_result.journal_id
-        })
-
-        {:ok, ledger_result,
-         %{
-           action: :journal_posted,
-           resource_type: :journal,
-           resource_id: ledger_result.journal_id,
-           explanation: %{backend: backend, status: ledger_result.status}
-         }}
+    case Commit.decision(%{
+           event: event,
+           normalized: normalized,
+           status: "no_accounting_impact",
+           stages: stages,
+           explanation: explanation || %{reason: :no_accounting_impact}
+         }) do
+      {:ok, _} ->
+        emit_no_impact_success(normalized, knowledge_result, explanation, start_mono)
 
       {:error, %Error{} = error} ->
-        Telemetry.emit([:logistiki, :ledger, :execute, :stop], %{}, %{
-          backend: backend,
-          result: :error
-        })
-
         {:error, error}
     end
   end
 
-  # audit_stage — private helper.
-  defp audit_stage(normalized, journal, ledger_result, stages) do
-    journal_id = (ledger_result && ledger_result.journal_id) || (journal && journal.id)
+  defp finish_accounting(ctx, journal, postings, explanation) do
+    %{
+      event: event,
+      normalized: normalized,
+      knowledge_result: knowledge_result,
+      stages: stages,
+      opts: opts,
+      start_mono: start_mono
+    } = ctx
 
-    evidence =
-      Evidence.build(normalized.id, journal_id, stages, %{
-        event_type: normalized.type,
-        ledger_status: ledger_result && ledger_result.status
-      })
+    with :ok <- maybe_verify_oracle(journal, postings),
+         {:ok, commit_result} <-
+           commit_posted(event, normalized, journal, postings, explanation, stages) do
+      emit_posted_success(
+        commit_result,
+        normalized,
+        knowledge_result,
+        explanation,
+        opts,
+        start_mono
+      )
+    end
+  end
 
-    Audit.record_evidence(evidence)
+  defp emit_no_impact_success(normalized, knowledge_result, explanation, start_mono) do
+    Telemetry.stop([:logistiki, :event, :process], start_mono, %{policy: nil})
+    Telemetry.emit([:logistiki, :commit, :stop], %{count: 1}, %{outcome: :accepted})
+    Audit.drain_pending_async(normalized.id)
 
-    Audit.record(%{
-      event_id: to_string(normalized.id),
-      journal_id: journal_id,
-      action: "audit_event_written",
-      resource_type: "audit",
-      resource_id: to_string(normalized.id),
-      explanation: %{ledger_status: ledger_result && ledger_result.status}
-    })
-
-    Telemetry.emit([:logistiki, :audit, :write, :stop], %{}, %{event_id: normalized.id})
-
-    {:ok, normalized.id,
-     %{
-       action: :audit_event_written,
-       resource_type: :audit,
-       resource_id: normalized.id,
-       explanation: %{}
+    {:ok,
+     %Result{
+       event_id: normalized.id,
+       policy: knowledge_result.policy,
+       template: knowledge_result.template,
+       journal: nil,
+       postings: [],
+       ledger_result: nil,
+       projection_updates: %{},
+       audit_evidence_id: normalized.id,
+       warnings: [],
+       explanation: explanation || %{reason: :no_accounting_impact}
      }}
   end
 
-  # projection_updates — private helper.
-  defp projection_updates(ledger_result) do
-    if ledger_result, do: ledger_result.balances, else: %{}
+  defp emit_posted_success(
+         commit_result,
+         normalized,
+         knowledge_result,
+         explanation,
+         opts,
+         start_mono
+       ) do
+    posted_journal = commit_result.journal
+    posted_postings = commit_result.postings
+    backend = Ledger.backend()
+
+    ledger_result = %Ledger.Result{
+      backend: backend,
+      journal_id: posted_journal.id,
+      status: :ok,
+      posted_at: posted_journal.posted_at,
+      balances: compute_balances(posted_journal, opts),
+      details: ledger_details(posted_journal, backend)
+    }
+
+    Telemetry.stop([:logistiki, :event, :process], start_mono, %{
+      event_type: normalized.type,
+      policy: knowledge_result.policy,
+      outcome: :posted
+    })
+
+    Telemetry.emit([:logistiki, :commit, :stop], %{count: 1}, %{
+      outcome: :posted,
+      event_type: normalized.type
+    })
+
+    Audit.drain_pending_async(normalized.id)
+
+    {:ok,
+     %Result{
+       event_id: normalized.id,
+       policy: knowledge_result.policy,
+       template: knowledge_result.template,
+       journal: posted_journal,
+       postings: posted_postings,
+       ledger_result: ledger_result,
+       projection_updates: ledger_result.balances,
+       audit_evidence_id: normalized.id,
+       warnings: [],
+       explanation: explanation
+     }}
   end
 
-  # warnings_for — private helper.
-  defp warnings_for(%{requires_approval: false, blocked: false}), do: []
+  defp ledger_details(journal, BeancountBackend) do
+    %{journal: journal, oracle: :beancount}
+  end
 
-  # warnings_for — private helper.
-  defp warnings_for(_), do: []
+  defp ledger_details(journal, _backend), do: %{journal: journal}
 
-  # event_type — private helper.
-  defp event_type(%{type: _}), do: nil
+  defp maybe_verify_oracle(journal, postings) do
+    case Ledger.backend() do
+      BeancountBackend ->
+        BeancountBackend.verify_journal(journal, postings)
 
-  # event_type — private helper.
+      _ ->
+        :ok
+    end
+  end
+
+  defp commit_posted(event, normalized, journal, postings, explanation, stages) do
+    case Commit.post(%{
+           event: event,
+           normalized: normalized,
+           journal: journal,
+           postings: postings,
+           stages: stages,
+           explanation: explanation
+         }) do
+      {:ok, %{journal: j, postings: posts}} ->
+        Telemetry.emit([:logistiki, :ledger, :execute, :stop], %{}, %{
+          backend: Ledger.backend(),
+          journal_id: j.id
+        })
+
+        {:ok, %{journal: %{j | postings: posts}, postings: posts}}
+
+      {:error, %Error{code: :duplicate_idempotency_key}} ->
+        case Outcome.resolve_idempotency(normalized) do
+          {:replay, result} ->
+            {:replay, result}
+
+          :proceed ->
+            # Unique race lost but prior row not yet visible — typed duplicate.
+            {:error,
+             Error.new(:duplicate_idempotency_key,
+               message: "concurrent duplicate commit",
+               stage: :persistence
+             )}
+
+          other ->
+            other
+        end
+
+      {:error, %Error{} = error} ->
+        {:error, error}
+    end
+  end
+
+  defp compute_balances(journal, opts) do
+    (journal.postings || [])
+    |> Enum.map(& &1.account_code)
+    |> Enum.uniq()
+    |> Map.new(fn code ->
+      case ProjectionEngine.balance(code, opts) do
+        {:ok, balances} -> {code, balances}
+        {:error, _} -> {code, []}
+      end
+    end)
+  end
+
+  defp emit_failure(start_mono, %Error{} = error) do
+    Telemetry.stop([:logistiki, :event, :process], start_mono, %{error: error.code})
+    Telemetry.emit([:logistiki, :commit, :stop], %{count: 1}, %{outcome: :failed, code: error.code})
+  end
+
+  defp event_type(%{type: type}) when not is_nil(type), do: type
+
   defp event_type(event) do
-    {:ok, normalized} = Event.normalize(event)
-    normalized.type
+    case Event.normalize(event) do
+      {:ok, normalized} -> normalized.type
+      _ -> nil
+    end
   rescue
     _ -> nil
-  end
-
-  # maybe_update_event_status — private helper.
-  defp maybe_update_event_status(nil, _result), do: :ok
-
-  # maybe_update_event_status — private helper.
-  defp maybe_update_event_status(persisted, %Result{journal: nil}) do
-    Events.update_status(persisted, :no_accounting_impact)
-  end
-
-  # maybe_update_event_status — private helper.
-  defp maybe_update_event_status(persisted, %Result{}) do
-    Events.update_status(persisted, :processed)
   end
 end

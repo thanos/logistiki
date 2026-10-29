@@ -3,6 +3,10 @@ defmodule Logistiki.IntegrationTest do
 
   alias Logistiki.Demo.Seeds
   alias Logistiki.Event.{AccountOpened, FeeAssessed}
+  alias Logistiki.Ledger.Beancount, as: BeancountBackend
+  alias Logistiki.Ledger.BeancountMapper
+  alias Logistiki.Ledger.Simulation, as: SimulationBackend
+  alias Logistiki.VirtualAccounts
 
   setup do
     {entities, accounts} = Seeds.run()
@@ -11,8 +15,8 @@ defmodule Logistiki.IntegrationTest do
 
   describe "process/1 with the simulation backend" do
     setup do
-      Logistiki.put_ledger_backend(Logistiki.Ledger.Simulation)
-      on_exit(fn -> Logistiki.put_ledger_backend(Logistiki.Ledger.Simulation) end)
+      Logistiki.put_ledger_backend(SimulationBackend)
+      on_exit(fn -> Logistiki.put_ledger_backend(SimulationBackend) end)
       :ok
     end
 
@@ -118,19 +122,18 @@ defmodule Logistiki.IntegrationTest do
 
       trail = Logistiki.Audit.trail_for_event(event.id)
       actions = Enum.map(trail, & &1.action)
-      assert "business_event_received" in actions
+      assert "commit_provenance" in actions
+      assert "event_normalized" in actions
       assert "facts_generated" in actions
       assert "journal_built" in actions
       assert "invariant_validation_succeeded" in actions
-      assert "journal_posted" in actions
-      assert "audit_event_written" in actions
     end
   end
 
   describe "process/1 with the beancount backend" do
     setup do
-      Logistiki.put_ledger_backend(Logistiki.Ledger.Beancount)
-      on_exit(fn -> Logistiki.put_ledger_backend(Logistiki.Ledger.Simulation) end)
+      Logistiki.put_ledger_backend(BeancountBackend)
+      on_exit(fn -> Logistiki.put_ledger_backend(SimulationBackend) end)
       :ok
     end
 
@@ -151,13 +154,13 @@ defmodule Logistiki.IntegrationTest do
                  Seeds.deposit_event("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING", "1000.00")
                )
 
-      assert {:ok, _} = Logistiki.Ledger.Beancount.verify_ledger()
+      assert {:ok, _} = BeancountBackend.verify_ledger()
     end
   end
 
   describe "backend agreement" do
     test "simulation and beancount agree on balances for the same scenario" do
-      Logistiki.put_ledger_backend(Logistiki.Ledger.Simulation)
+      Logistiki.put_ledger_backend(SimulationBackend)
 
       assert {:ok, _} =
                Logistiki.process(
@@ -172,17 +175,15 @@ defmodule Logistiki.IntegrationTest do
       sim_balances = balance_map("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
 
       # The beancount oracle should agree with the persisted (simulation) results.
-      assert {:ok, oracle} = Logistiki.Ledger.Beancount.oracle_balances()
+      assert {:ok, oracle} = BeancountBackend.oracle_balances()
 
       {:ok, client_account} =
-        Logistiki.VirtualAccounts.get_account_by_code(
-          "LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING"
-        )
+        VirtualAccounts.get_account_by_code("LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING")
 
-      client_beancount = Logistiki.Ledger.BeancountMapper.to_beancount_account(client_account)
+      client_beancount = BeancountMapper.to_beancount_account(client_account)
       assert Map.has_key?(oracle, client_beancount)
 
-      Logistiki.put_ledger_backend(Logistiki.Ledger.Simulation)
+      Logistiki.put_ledger_backend(SimulationBackend)
       # Simulation net for the client account.
       [sim_client] = sim_balances
       # Oracle balance is the beancount signed position; a credit balance is negative.

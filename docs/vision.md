@@ -62,6 +62,9 @@ later integrations. Logistiki v0.1.0 is the embedded accounting engine.
   journals/postings as internal artifacts, invariant validation, simulation and
   Beancount backends, balance/statement/trial-balance projections, audit
   evidence, property tests.
+- **v0.1.1** — financial durability hardening: atomic Logistiki.Repo commits,
+  idempotency/conflict contract, outcome lookup, DB immutability, concurrent
+  reversal/posting safety, L11 regression suite, embedding guide (separate DB).
 - **v0.2.0** — richer policy versioning, a replay engine, comparison between
   policy versions, knowledge-program import/export, richer reporting.
 - **v0.3.0** — a native Elixir ledger backend with a full regression suite

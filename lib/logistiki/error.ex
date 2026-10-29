@@ -25,6 +25,12 @@ defmodule Logistiki.Error do
     * `:account_not_postable` — a posting targets a non-leaf / frozen / closed account
     * `:unbalanced_journal` — debits and credits do not balance per currency
     * `:duplicate_idempotency_key` — a journal with this idempotency key is already posted
+    * `:idempotency_conflict` — same identity key with a different payload fingerprint
+    * `:event_persist_failed` — durable business-event persistence failed
+    * `:audit_persist_failed` — mandatory audit provenance persistence failed
+    * `:commit_failed` — the atomic accounting commit failed
+    * `:precision_invalid` — amount scale exceeds the currency precision rule
+    * `:currency_mismatch` — posting currency does not match the account currency
     * `:immutable_journal` — an attempt was made to mutate a posted journal
     * `:backend_error` — the ledger backend returned an error
     * `:projection_error` — a projection could not be computed

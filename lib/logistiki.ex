@@ -33,6 +33,7 @@ defmodule Logistiki do
   `Logistiki.Relationships`, `Logistiki.Knowledge`, `Logistiki.Audit`).
   """
 
+  alias Logistiki.Accounting.Outcome
   alias Logistiki.Accounting.Pipeline
   alias Logistiki.Accounting.Result
   alias Logistiki.Error
@@ -92,6 +93,29 @@ defmodule Logistiki do
   def process(event, opts \\ []) do
     Pipeline.run(event, opts)
   end
+
+  @doc """
+  Looks up the durable outcome of a previously processed business event.
+
+  Use after a timeout or crash instead of inventing a new idempotency key.
+
+  ## Arguments
+
+    * `ref` — `map()` or keyword with:
+        * `:event_id` — business event id (`event.id`)
+        * `:source_system` / `:source_id` — source identity pair
+
+  ## Returns
+
+    * `{:ok, %Result{}}` — reconstructed outcome (`explanation.outcome` may be
+      `:already_processed`)
+    * `{:error, :not_found}` — no durable event
+    * `{:error, %Error{}}` — conflict / lookup error
+  """
+  @doc since: "0.1.1"
+  @spec lookup_outcome(map() | keyword()) ::
+          {:ok, Result.t()} | {:error, :not_found | Error.t()}
+  def lookup_outcome(ref), do: Outcome.lookup(ref)
 
   @doc """
   Computes the balance(s) for an account.

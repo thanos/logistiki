@@ -54,6 +54,10 @@ defmodule Logistiki.Events.BusinessEvent do
     field(:source_system, :string)
     # Source-system event id. Example: `\"wire_123\"`, `\"crm_456\"`
     field(:source_id, :string)
+    # Business event id from the publisher (`event.id`). Example: `\"evt_001\"`
+    field(:external_event_id, :string)
+    # Canonical hash of posting-affecting normalized fields.
+    field(:payload_fingerprint, :string)
     # Actor who initiated the event. Example: `\"user_789\"`
     field(:actor_id, :string)
     # When the event occurred. Example: `~U[2026-07-07 12:00:00Z]`
@@ -106,6 +110,8 @@ defmodule Logistiki.Events.BusinessEvent do
           event_type: String.t() | nil,
           source_system: String.t() | nil,
           source_id: String.t() | nil,
+          external_event_id: String.t() | nil,
+          payload_fingerprint: String.t() | nil,
           actor_id: String.t() | nil,
           occurred_at: DateTime.t() | nil,
           effective_date: Date.t() | nil,
@@ -143,6 +149,8 @@ defmodule Logistiki.Events.BusinessEvent do
       :event_type,
       :source_system,
       :source_id,
+      :external_event_id,
+      :payload_fingerprint,
       :actor_id,
       :occurred_at,
       :effective_date,
@@ -154,5 +162,7 @@ defmodule Logistiki.Events.BusinessEvent do
     ])
     |> validate_required([:event_type, :status])
     |> validate_inclusion(:status, Enum.map(@statuses, &Atom.to_string/1))
+    |> unique_constraint(:external_event_id, name: :business_events_external_event_id_index)
+    |> unique_constraint([:source_system, :source_id], name: :business_events_source_unique_index)
   end
 end

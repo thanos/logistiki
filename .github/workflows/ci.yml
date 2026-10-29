@@ -57,8 +57,11 @@ jobs:
       - name: Compile dependencies
         run: mix deps.compile
 
+      - name: Check formatting
+        run: mix format --check-formatted
+
       - name: Compile app
-        run: mix compile # --warnings-as-errors --no-deps
+        run: mix compile --warnings-as-errors
 
       - name: Create and migrate test database
         run: |
@@ -68,8 +71,8 @@ jobs:
       - name: Run credo
         run: mix credo
 
-      - name: Run tests
-        run: mix test
+      - name: Run tests (including concurrency-tagged L11 suite)
+        run: mix test --include concurrency --include postgres
 
   coverage:
     name: Coverage

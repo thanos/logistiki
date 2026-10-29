@@ -16,6 +16,7 @@ defmodule Logistiki.Knowledge do
   """
 
   alias Logistiki.Knowledge.KnowledgeBase
+  alias Logistiki.Knowledge.Rules
 
   @doc """
   Returns the configured knowledge program module.
@@ -142,6 +143,6 @@ defmodule Logistiki.Knowledge do
   @doc since: "0.1.0"
   @spec rule_categories() :: keyword()
   def rule_categories do
-    Logistiki.Knowledge.Rules.categories()
+    Rules.categories()
   end
 end

@@ -1,0 +1,228 @@
+Compiling 5 files (.ex)
+Generated logistiki app
+Running ExUnit with seed: 166276, max_cases: 20
+
+    warning: variable "result" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 57 │       {:ok, result} = Logistiki.process(event)
+    │             ~~~~~~
+    │
+    └─ test/logistiki/accounting/context_test.exs:57:13: Logistiki.Accounting.ContextTest."test list_journals/1 lists journals filtered by event_id"/1
+
+..    warning: unused alias Accounting
+    │
+  4 │   alias Logistiki.Accounting
+    │   ~
+    │
+    └─ test/logistiki/ledger/beancount_coverage_test.exs:4:3
+
+    warning: variable "event" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 36 │       event = %Normalized{
+    │       ~~~~~
+    │
+    └─ test/logistiki/accounting/pipeline_coverage_test.exs:36:7: Logistiki.Accounting.PipelineCoverageTest."test run/2 error paths returns error for a blocked event (sanctions)"/1
+
+..................    warning: unused alias Posting
+    │
+  5 │   alias Logistiki.Accounting.{Journal, Posting}
+    │   ~
+    │
+    └─ test/logistiki/accounting/context_test.exs:5:3
+
+...................................    warning: unused alias VirtualAccounts
+    │
+  6 │   alias Logistiki.VirtualAccounts
+    │   ~
+    │
+    └─ test/logistiki/v011/durability_test.exs:6:3
+
+.    warning: variable "sim_client" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 85 │       assert {:ok, [sim_client]} =
+    │                     ~~~~~~~~~~
+    │
+    └─ test/logistiki/ledger/ledger_test.exs:85:21: Logistiki.LedgerTest."test backend equivalence simulation and beancount produce equivalent balances for the same journal"/1
+
+    warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 19 │     test "processes a deposit end-to-end", %{accounts: accounts} do
+    │                                                        ~~~~~~~~
+    │
+    └─ test/logistiki/integration_test.exs:19:56: Logistiki.IntegrationTest."test process/1 with the simulation backend processes a deposit end-to-end"/1
+
+    warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 37 │     test "aggregates parent account balances from descendants", %{accounts: accounts} do
+    │                                                                             ~~~~~~~~
+    │
+    └─ test/logistiki/integration_test.exs:37:77: Logistiki.IntegrationTest."test process/1 with the simulation backend aggregates parent account balances from descendants"/1
+
+    warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 47 │     test "processes a fee and then reverses it, restoring balances", %{accounts: accounts} do
+    │                                                                                  ~~~~~~~~
+    │
+    └─ test/logistiki/integration_test.exs:47:82: Logistiki.IntegrationTest."test process/1 with the simulation backend processes a fee and then reverses it, restoring balances"/1
+
+    warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 78 │     test "processes a no-accounting-impact event", %{accounts: accounts} do
+    │                                                                ~~~~~~~~
+    │
+    └─ test/logistiki/integration_test.exs:78:64: Logistiki.IntegrationTest."test process/1 with the simulation backend processes a no-accounting-impact event"/1
+
+    warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 87 │     test "produces a balanced trial balance", %{accounts: accounts} do
+    │                                                           ~~~~~~~~
+    │
+    └─ test/logistiki/integration_test.exs:87:59: Logistiki.IntegrationTest."test process/1 with the simulation backend produces a balanced trial balance"/1
+
+     warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+     │
+ 102 │     test "statement includes a running balance", %{accounts: accounts} do
+     │                                                              ~~~~~~~~
+     │
+     └─ test/logistiki/integration_test.exs:102:62: Logistiki.IntegrationTest."test process/1 with the simulation backend statement includes a running balance"/1
+
+     warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+     │
+ 115 │     test "audit evidence explains the full chain", %{accounts: accounts} do
+     │                                                                ~~~~~~~~
+     │
+     └─ test/logistiki/integration_test.exs:115:64: Logistiki.IntegrationTest."test process/1 with the simulation backend audit evidence explains the full chain"/1
+
+     warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+     │
+ 136 │     test "processes a deposit and verifies with the oracle", %{accounts: accounts} do
+     │                                                                          ~~~~~~~~
+     │
+     └─ test/logistiki/integration_test.exs:136:74: Logistiki.IntegrationTest."test process/1 with the beancount backend processes a deposit and verifies with the oracle"/1
+
+     warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+     │
+ 147 │     test "the full ledger verifies with beancount check", %{accounts: accounts} do
+     │                                                                       ~~~~~~~~
+     │
+     └─ test/logistiki/integration_test.exs:147:71: Logistiki.IntegrationTest."test process/1 with the beancount backend the full ledger verifies with beancount check"/1
+
+    warning: unused alias AuditEvent
+    │
+  5 │   alias Logistiki.Audit.AuditEvent
+    │   ~
+    │
+    └─ test/logistiki/audit/audit_test.exs:5:3
+
+...............................    warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 14 │     test "leaf balance reflects a posting", %{accounts: accounts} do
+    │                                                         ~~~~~~~~
+    │
+    └─ test/logistiki/projections/projections_test.exs:14:57: Logistiki.ProjectionsTest."test balance projections leaf balance reflects a posting"/1
+
+    warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 25 │     test "parent balance aggregates descendants", %{accounts: accounts} do
+    │                                                               ~~~~~~~~
+    │
+    └─ test/logistiki/projections/projections_test.exs:25:63: Logistiki.ProjectionsTest."test balance projections parent balance aggregates descendants"/1
+
+.    warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 74 │     test "statement produces ordered running balances", %{accounts: accounts} do
+    │                                                                     ~~~~~~~~
+    │
+    └─ test/logistiki/projections/projections_test.exs:74:69: Logistiki.ProjectionsTest."test statement projections statement produces ordered running balances"/1
+
+.    warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+    │
+ 95 │     test "trial balance balances per currency", %{accounts: accounts} do
+    │                                                             ~~~~~~~~
+    │
+    └─ test/logistiki/projections/projections_test.exs:95:61: Logistiki.ProjectionsTest."test trial balance trial balance balances per currency"/1
+
+     warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+     │
+ 113 │     test "balance sheet separates assets, liabilities, equity", %{accounts: accounts} do
+     │                                                                             ~~~~~~~~
+     │
+     └─ test/logistiki/projections/projections_test.exs:113:77: Logistiki.ProjectionsTest."test balance sheet and income statement balance sheet separates assets, liabilities, equity"/1
+
+     warning: variable "accounts" is unused (if the variable is not meant to be used, prefix it with an underscore)
+     │
+ 126 │     test "income statement separates income and expenses with net profit", %{accounts: accounts} do
+     │                                                                                        ~~~~~~~~
+     │
+     └─ test/logistiki/projections/projections_test.exs:126:88: Logistiki.ProjectionsTest."test balance sheet and income statement income statement separates income and expenses with net profit"/1
+
+...    warning: function journal/1 is unused
+    │
+ 22 │   defp journal(key \\ nil), do: %Journal{idempotency_key: key, status: "draft"}
+    │        ~
+    │
+    └─ test/logistiki/accounting/invariant_validator_test.exs:22:8: Logistiki.Accounting.InvariantValidatorTest (module)
+
+...    warning: unused alias AccountOpened
+    │
+  5 │   alias Logistiki.Event.{AccountOpened, FeeAssessed}
+    │   ~
+    │
+    └─ test/logistiki/integration_test.exs:5:3
+
+    warning: unused alias FeeAssessed
+    │
+  5 │   alias Logistiki.Event.{AccountOpened, FeeAssessed}
+    │   ~
+    │
+    └─ test/logistiki/integration_test.exs:5:3
+
+......................................    warning: unused alias VirtualAccount
+    │
+  5 │   alias Logistiki.VirtualAccounts.VirtualAccount
+    │   ~
+    │
+    └─ test/logistiki/virtual_accounts/context_coverage_test.exs:5:3
+
+....................................................................................    warning: unused alias Journal
+    │
+  6 │   alias Logistiki.Accounting.{InvariantValidator, Journal, Posting}
+    │   ~
+    │
+    └─ test/logistiki/property_test.exs:6:3
+
+.....................................................................=== Logistiki v0.1.0 demo ===
+Ledger backend: Logistiki.Ledger.Simulation
+1. Load knowledge program...
+   program: Logistiki.Knowledge.Program
+2-4. Create entity tree, account tree, and link entities to accounts...
+   5 entities, 20 accounts
+5. Process deposit event for Acme Operating...
+   deposit: policy=:cash_deposit journal=58128 status="posted"
+6-8. Selected policy and generated journal/postings:
+   policy: :cash_deposit
+   journal: 58128 (posted)
+   postings: 2
+9-10. Show balance...
+   ASSETS:CASH:USD:NOSTRO net = 1000.0000
+11. Show statement...
+   2026-07-07 LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING dr=- cr=1000.0000 running=-1000.0000
+12. Process wire fee event for Acme Operating...
+   fee: policy=:corporate_wire_fee journal=58129 status="posted"
+13. Reverse the mistaken fee...
+   reversal journal 58130 posted
+14. Show balance restored...
+   LIABILITIES:CLIENT_DEPOSITS:USD:ACME:OPERATING net = -1000.0000 (restored to -1000.00)
+   INCOME:FEES:WIRE net = 0.0000 (restored to 0)
+15. Show audit evidence explaining everything...
+   6 audit events for the deposit event:
+     - commit_provenance
+     - event_normalized
+     - facts_generated
+     - business_rules_evaluated
+     - journal_built
+     - invariant_validation_succeeded
+=== demo complete ===
+..............................................................
+Finished in 8.4 seconds (0.7s async, 7.7s sync)
+8 properties, 340 tests, 0 failures

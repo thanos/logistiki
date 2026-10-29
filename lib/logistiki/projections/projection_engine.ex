@@ -60,8 +60,9 @@ defmodule Logistiki.Projections.ProjectionEngine do
   # balance_for_account — private helper.
   defp balance_for_account(%VirtualAccount{id: id} = account, opts) do
     currency = Keyword.get(opts, :currency)
+    as_of = Keyword.get(opts, :as_of)
     account_ids = VirtualAccounts.descendant_ids(account)
-    {:ok, balances_for_account_ids(account_ids, currency, id)}
+    {:ok, balances_for_account_ids(account_ids, currency, id, as_of)}
   end
 
   @doc "Computes balances for accounts linked to `entity`."
@@ -70,7 +71,8 @@ defmodule Logistiki.Projections.ProjectionEngine do
     accounts = Relationships.list_accounts_for_entity(entity, opts)
     account_ids = Enum.map(accounts, & &1.id)
     currency = Keyword.get(opts, :currency)
-    {:ok, balances_for_account_ids(account_ids, currency, nil)}
+    as_of = Keyword.get(opts, :as_of)
+    {:ok, balances_for_account_ids(account_ids, currency, nil, as_of)}
   end
 
   @doc "Computes balances for accounts linked to `entity` or any of its descendants."
@@ -79,14 +81,15 @@ defmodule Logistiki.Projections.ProjectionEngine do
     accounts = Relationships.list_accounts_for_entity_tree(entity, opts)
     account_ids = Enum.map(accounts, & &1.id)
     currency = Keyword.get(opts, :currency)
-    {:ok, balances_for_account_ids(account_ids, currency, nil)}
+    as_of = Keyword.get(opts, :as_of)
+    {:ok, balances_for_account_ids(account_ids, currency, nil, as_of)}
   end
 
   # balances_for_account_ids — private helper.
-  defp balances_for_account_ids([], _currency, _owner_id), do: []
+  defp balances_for_account_ids([], _currency, _owner_id, _as_of), do: []
 
   # balances_for_account_ids — private helper.
-  defp balances_for_account_ids(account_ids, currency, owner_id) do
+  defp balances_for_account_ids(account_ids, currency, owner_id, as_of) do
     rows =
       from(p in Posting,
         join: j in Journal,
@@ -102,6 +105,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
         }
       )
       |> maybe_filter_currency(currency)
+      |> maybe_filter_as_of(as_of)
       |> Repo.all()
 
     rows
@@ -150,6 +154,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
   # statement_for_account — private helper.
   defp statement_for_account(%VirtualAccount{} = account, opts) do
     currency = Keyword.get(opts, :currency)
+    as_of = Keyword.get(opts, :as_of)
     account_ids = VirtualAccounts.descendant_ids(account)
 
     rows =
@@ -176,6 +181,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
         }
       )
       |> maybe_filter_currency(currency)
+      |> maybe_filter_as_of(as_of)
       |> Repo.all()
       |> attach_running_balance()
 
@@ -226,6 +232,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
   @doc since: "0.1.0"
   def trial_balance(opts \\ []) do
     currency = Keyword.get(opts, :currency)
+    as_of = Keyword.get(opts, :as_of)
 
     rows =
       from(p in Posting,
@@ -245,6 +252,7 @@ defmodule Logistiki.Projections.ProjectionEngine do
         }
       )
       |> maybe_filter_currency(currency)
+      |> maybe_filter_as_of(as_of)
       |> Repo.all()
 
     lines =
@@ -494,4 +502,24 @@ defmodule Logistiki.Projections.ProjectionEngine do
   # maybe_filter_currency — private helper.
   defp maybe_filter_currency(query, nil), do: query
   defp maybe_filter_currency(query, currency), do: where(query, [p], p.currency == ^currency)
+
+  # `:as_of` includes journals whose effective_date is on or before the date.
+  # Tie-break within a day uses inserted_at / sequence ordering at statement time;
+  # balance aggregates include all matching effective dates.
+  defp maybe_filter_as_of(query, nil), do: query
+
+  defp maybe_filter_as_of(query, %Date{} = as_of) do
+    where(query, [_p, j], j.effective_date <= ^as_of)
+  end
+
+  defp maybe_filter_as_of(query, %DateTime{} = as_of) do
+    maybe_filter_as_of(query, DateTime.to_date(as_of))
+  end
+
+  defp maybe_filter_as_of(query, as_of) when is_binary(as_of) do
+    case Date.from_iso8601(as_of) do
+      {:ok, date} -> maybe_filter_as_of(query, date)
+      _ -> query
+    end
+  end
 end

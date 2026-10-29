@@ -169,7 +169,7 @@ Add `logistiki` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:logistiki, "~> 0.1.0"}
+    {:logistiki, "~> 0.1.1"}
   ]
 end
 ```
@@ -183,7 +183,7 @@ Add `ecto_sqlite3` to use SQLite in-memory instead of PostgreSQL:
 ```elixir
 def deps do
   [
-    {:logistiki, "~> 0.1.0"},
+    {:logistiki, "~> 0.1.1"},
     {:ecto_sqlite3, "~> 0.18"}
   ]
 end
