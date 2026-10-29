@@ -381,10 +381,7 @@ defmodule Logistiki.Accounting.Commit do
   end
 
   defp safe_build_reversal(journal, postings, attrs) do
-    case JournalBuilder.build_reversal(journal, postings, attrs) do
-      {:ok, reversal, reversal_postings} -> {:ok, reversal, reversal_postings}
-      other -> other
-    end
+    JournalBuilder.build_reversal(journal, postings, attrs)
   rescue
     e ->
       {:error,
